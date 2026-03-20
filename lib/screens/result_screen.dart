@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_config.dart';
+import '../constants/animation_constants.dart';
+import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
 import '../providers/game_state_notifier.dart';
 import '../repositories/elo_repository.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 
 /// Result screen — round summary, ELO delta, action buttons (UI-006).
 class ResultScreen extends ConsumerStatefulWidget {
@@ -36,17 +39,17 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     _entryControllers = List.generate(6, (i) {
       return AnimationController(
         vsync: this,
-        duration: const Duration(milliseconds: 500),
+        duration: kEntryDuration,
       );
     });
 
     _fadeAnimations = _entryControllers
-        .map((c) => CurvedAnimation(parent: c, curve: Curves.easeOut))
+        .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
         .map((c) => Tween<double>(begin: 0, end: 1).animate(c))
         .toList();
 
     _slideAnimations = _entryControllers
-        .map((c) => CurvedAnimation(parent: c, curve: Curves.easeOut))
+        .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
         .map((c) =>
             Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
                 .animate(c))
@@ -54,7 +57,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
 
     // Fire staggered.
     for (var i = 0; i < _entryControllers.length; i++) {
-      Future.delayed(Duration(milliseconds: 100 * (i + 1)), () {
+      Future.delayed(kEntryStagger * (i + 1), () {
         if (mounted) _entryControllers[i].forward();
       });
     }
@@ -145,7 +148,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: 32),
             child: Column(
               children: [
                 const Spacer(),
@@ -312,7 +315,7 @@ class _ScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = isTie
-        ? AppColors.muted.withValues(alpha: 0.3)
+        ? AppColors.mutedFaint
         : isWinner
             ? AppColors.primary
             : Colors.transparent;
@@ -324,12 +327,7 @@ class _ScoreCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 2),
         boxShadow: isWinner && !isTie
-            ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.4),
-                  blurRadius: 24,
-                ),
-              ]
+            ? [AppShadows.primaryGlowStrong]
             : null,
       ),
       child: Column(
@@ -381,16 +379,16 @@ class _EloRow extends StatelessWidget {
         delta > 0 ? Icons.trending_up : (delta < 0 ? Icons.trending_down : null);
 
     final line = Container(
-      width: 32,
+      width: kBadgeSize,
       height: 2,
-      color: AppColors.muted.withValues(alpha: 0.4),
+      color: AppColors.mutedSubtle,
     );
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(kCardPadding),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(kCardRadius),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -479,19 +477,14 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(
         scale: _pressed ? 0.98 : 1.0,
-        duration: const Duration(milliseconds: 80),
+        duration: kTapScale,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.25),
-                blurRadius: 24,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(kButtonRadius),
+            boxShadow: [AppShadows.primaryGlow],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -525,9 +518,9 @@ class _OutlinedButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(kButtonRadius),
           border: Border.all(
-            color: AppColors.muted.withValues(alpha: 0.6),
+            color: AppColors.mutedMedium,
           ),
         ),
         alignment: Alignment.center,

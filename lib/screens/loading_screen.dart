@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../constants/animation_constants.dart';
+import '../constants/layout_constants.dart';
 import '../models/game_config.dart';
 import '../providers/game_state_notifier.dart';
 import '../services/question_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 
 /// Loading screen — pulsing wordmark, question fetch, error retry (UI-003).
 class LoadingScreen extends ConsumerStatefulWidget {
@@ -44,14 +47,14 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
     // Pulse: opacity 1→0.6→1, scale 1→0.98→1, 2s loop.
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: kWordmarkPulse,
     )..repeat(reverse: true);
 
     _pulseOpacity = Tween<double>(begin: 1.0, end: 0.6).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve),
     );
     _pulseScale = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve),
     );
 
     // Fade in.
@@ -137,7 +140,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
         backgroundColor: AppColors.background,
         body: AnimatedOpacity(
           opacity: _entryOpacity,
-          duration: const Duration(milliseconds: 300),
+          duration: kRevealSlide,
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -272,13 +275,8 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
             padding: const EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
               color: AppColors.primary,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                  blurRadius: 24,
-                ),
-              ],
+              borderRadius: BorderRadius.circular(kButtonRadius),
+              boxShadow: [AppShadows.primaryGlow],
             ),
             alignment: Alignment.center,
             child: const Text(

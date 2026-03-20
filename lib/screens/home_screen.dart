@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/animation_constants.dart';
+import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/elo_sparkline.dart';
 
 /// Home screen — ELO display, sparkline & Play button (UI-001).
@@ -40,11 +43,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Wordmark — 0 ms delay, 500 ms duration.
     _wordmarkCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: kEntryDuration,
     );
     _wordmarkFade = CurvedAnimation(
       parent: _wordmarkCtrl,
-      curve: Curves.easeOut,
+      curve: kEntryCurve,
     );
     _wordmarkSlide = Tween<Offset>(
       begin: const Offset(-0.15, 0),
@@ -54,11 +57,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // ELO group — 200 ms delay, 500 ms duration.
     _eloCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: kEntryDuration,
     );
     _eloFade = CurvedAnimation(
       parent: _eloCtrl,
-      curve: Curves.easeOut,
+      curve: kEntryCurve,
     );
     _eloSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
@@ -68,11 +71,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Play button — 600 ms delay, 500 ms duration.
     _buttonCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: kEntryDuration,
     );
     _buttonFade = CurvedAnimation(
       parent: _buttonCtrl,
-      curve: Curves.easeOut,
+      curve: kEntryCurve,
     );
     _buttonSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
@@ -81,10 +84,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // Fire staggered.
     _wordmarkCtrl.forward();
-    Future.delayed(const Duration(milliseconds: 200), () {
+    Future.delayed(kEntryStagger * 2, () {
       if (mounted) _eloCtrl.forward();
     });
-    Future.delayed(const Duration(milliseconds: 600), () {
+    Future.delayed(kEntryStagger * 6, () {
       if (mounted) _buttonCtrl.forward();
     });
   }
@@ -124,7 +127,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _buildContent(int rating) {
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: kScreenPaddingH),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -214,17 +217,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 onTap: () => Navigator.pushNamed(context, '/topic'),
                 child: Container(
                   width: double.infinity,
-                  constraints: const BoxConstraints(minHeight: 48),
+                  constraints: const BoxConstraints(minHeight: kMinTapTarget),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.25),
-                        blurRadius: 24,
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(kButtonRadius),
+                    boxShadow: [AppShadows.primaryGlow],
                   ),
                   alignment: Alignment.center,
                   child: const Text(

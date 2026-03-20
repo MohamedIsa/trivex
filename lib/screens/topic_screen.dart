@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../constants/animation_constants.dart';
+import '../constants/layout_constants.dart';
 import '../models/game_config.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 
 /// Topic selection + difficulty picker (UI-002).
 class TopicScreen extends StatefulWidget {
@@ -27,9 +30,9 @@ class _TopicScreenState extends State<TopicScreen>
     super.initState();
     _entryCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: kTopicEntryDuration,
     );
-    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
+    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: kEntryCurve);
     _entrySlide = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
@@ -72,14 +75,14 @@ class _TopicScreenState extends State<TopicScreen>
           child: SlideTransition(
             position: _entrySlide,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Back arrow ────────────────────────────────────────
                   SizedBox(
-                    width: 48,
-                    height: 48,
+                    width: kMinTapTarget,
+                    height: kMinTapTarget,
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       icon: const Icon(
@@ -120,20 +123,20 @@ class _TopicScreenState extends State<TopicScreen>
                       fillColor: AppColors.background,
                       hintText: 'e.g. The Roman Empire',
                       hintStyle: TextStyle(
-                        color: AppColors.muted.withValues(alpha: 0.5),
+                        color: AppColors.mutedHalf,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 16,
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(kButtonRadius),
                         borderSide: BorderSide(
-                          color: AppColors.muted.withValues(alpha: 0.4),
+                          color: AppColors.mutedSubtle,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(kButtonRadius),
                         borderSide: const BorderSide(
                           color: AppColors.primary,
                           width: 2,
@@ -209,23 +212,18 @@ class _DifficultyPill extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          constraints: const BoxConstraints(minHeight: 48),
+          duration: kButtonTransition,
+          constraints: const BoxConstraints(minHeight: kMinTapTarget),
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(kChipRadius),
             border: selected
                 ? null
                 : Border.all(
-                    color: AppColors.muted.withValues(alpha: 0.4),
+                    color: AppColors.mutedSubtle,
                   ),
             boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                    ),
-                  ]
+                ? [AppShadows.primaryGlowSmall]
                 : null,
           ),
           alignment: Alignment.center,
@@ -256,19 +254,14 @@ class _StartButton extends StatelessWidget {
     return GestureDetector(
       onTap: enabled ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: kButtonTransition,
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: enabled ? AppColors.primary : AppColors.card,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(kButtonRadius),
           boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                    blurRadius: 24,
-                  ),
-                ]
+              ? [AppShadows.primaryGlow]
               : null,
         ),
         alignment: Alignment.center,
@@ -277,7 +270,7 @@ class _StartButton extends StatelessWidget {
           style: TextStyle(
             color: enabled
                 ? AppColors.foreground
-                : AppColors.muted.withValues(alpha: 0.4),
+                : AppColors.mutedSubtle,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/animation_constants.dart';
 import '../providers/game_state_notifier.dart';
 
 /// A 15-second countdown controller that integrates with [gameStateProvider].
@@ -29,7 +30,7 @@ class GameTimerState extends ConsumerState<GameTimer>
 
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 15),
+      duration: kTimerDuration,
     );
 
     controller.addStatusListener(_onStatus);

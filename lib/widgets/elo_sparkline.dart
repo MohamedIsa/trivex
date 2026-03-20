@@ -69,8 +69,8 @@ class EloSparkline extends ConsumerWidget {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      AppColors.teal.withValues(alpha: 0.3),
-                      AppColors.teal.withValues(alpha: 0.0),
+                      AppColors.accentGlow,
+                      AppColors.accentTransparent,
                     ],
                   ),
                 ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_state.dart';
+import '../constants/animation_constants.dart';
+import '../constants/layout_constants.dart';
 import '../providers/game_state_notifier.dart';
 import '../theme/app_colors.dart';
 import '../widgets/game_timer.dart';
@@ -73,13 +75,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   Expanded(
                     child: Padding(
                       padding:
-                          const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                          const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: kScreenPaddingH),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Question text — slides in on each new question.
                           AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
+                            duration: kRevealSlide,
                             transitionBuilder: (child, animation) {
                               final offsetAnimation = Tween<Offset>(
                                 begin: const Offset(0.05, 0),
@@ -96,7 +98,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                             child: AnimatedOpacity(
                               key: ValueKey(state.currentIndex),
                               opacity: state.isRevealing ? 0.5 : 1.0,
-                              duration: const Duration(milliseconds: 200),
+                              duration: kButtonTransition,
                               child: Text(
                                 state.currentQuestion.question,
                                 style: const TextStyle(
@@ -169,7 +171,7 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.card,
         border: Border(bottom: BorderSide(color: AppColors.border)),
@@ -235,7 +237,7 @@ class _TimerBar extends StatelessWidget {
     // If the controller isn't ready yet, draw the full-width bar.
     if (controller == null) {
       return SizedBox(
-        height: 4,
+        height: kTimerBarHeight,
         child: Container(color: AppColors.primary),
       );
     }
@@ -245,7 +247,7 @@ class _TimerBar extends StatelessWidget {
       builder: (_, __) {
         final remaining = 1.0 - controller.value;
         return SizedBox(
-          height: 4,
+          height: kTimerBarHeight,
           width: double.infinity,
           child: Stack(
             children: [
@@ -315,11 +317,11 @@ class _AnswerTile extends StatelessWidget {
       badgeColor = AppColors.background;
       badgeTextColor = AppColors.foreground;
     } else {
-      bg = AppColors.card.withValues(alpha: 0.3);
+      bg = AppColors.cardDimmed;
       borderColor = AppColors.border;
-      textColor = AppColors.muted.withValues(alpha: 0.5);
-      badgeColor = AppColors.muted.withValues(alpha: 0.3);
-      badgeTextColor = AppColors.foreground.withValues(alpha: 0.5);
+      textColor = AppColors.mutedHalf;
+      badgeColor = AppColors.mutedFaint;
+      badgeTextColor = AppColors.foregroundHalf;
     }
 
     // ── Scale on tap ────────────────────────────────────────────────────
@@ -331,21 +333,21 @@ class _AnswerTile extends StatelessWidget {
       onTapCancel: onTapCancel,
       child: AnimatedScale(
         scale: scale,
-        duration: const Duration(milliseconds: 80),
+        duration: kTapScale,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: kMinTapTarget),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(kCardRadius),
             border: Border.all(color: borderColor),
           ),
           child: Row(
             children: [
               // Badge
               Container(
-                width: 32,
-                height: 32,
+                width: kBadgeSize,
+                height: kBadgeSize,
                 decoration: BoxDecoration(
                   color: badgeColor,
                   borderRadius: BorderRadius.circular(8),

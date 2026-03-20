@@ -3,9 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../constants/animation_constants.dart';
+import '../constants/layout_constants.dart';
 import '../models/game_state.dart';
 import '../providers/game_state_notifier.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_shadows.dart';
 import '../widgets/game_timer.dart';
 
 /// Reveal overlay — slides up over the game screen when `isRevealing` is true.
@@ -37,7 +40,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
 
     _slideController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: kEntryDuration,
     );
 
     // Approximate spring with easeOutBack — fast overshoot, then settle.
@@ -46,7 +49,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _slideController,
-      curve: Curves.easeOutBack,
+      curve: kSpringCurve,
     ));
   }
 
@@ -122,7 +125,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                     child: Container(
-                      color: Colors.black.withValues(alpha: 0.7),
+                      color: AppColors.backdropOverlay,
                     ),
                   ),
                 ),
@@ -193,18 +196,18 @@ class _SheetPanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+      padding: const EdgeInsets.fromLTRB(kCardPadding, kCardPadding, kCardPadding, 32),
       decoration: const BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(kCardPadding)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Result icon ──────────────────────────────────────────────────
           Container(
-            width: 64,
-            height: 64,
+            width: kResultIconSize,
+            height: kResultIconSize,
             decoration: BoxDecoration(
               color: _accentColor,
               shape: BoxShape.circle,
@@ -212,7 +215,7 @@ class _SheetPanel extends StatelessWidget {
             child: Icon(
               _isCorrect ? Icons.check : Icons.close,
               color: Colors.white,
-              size: 32,
+              size: kIconSize,
             ),
           ),
 
@@ -236,7 +239,7 @@ class _SheetPanel extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(kButtonRadius),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,19 +273,14 @@ class _SheetPanel extends StatelessWidget {
             onTapCancel: onNextTapCancel,
             child: AnimatedScale(
               scale: isNextPressed ? 0.98 : 1.0,
-              duration: const Duration(milliseconds: 80),
+              duration: kTapScale,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.25),
-                      blurRadius: 24,
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(kButtonRadius),
+                  boxShadow: [AppShadows.primaryGlow],
                 ),
                 alignment: Alignment.center,
                 child: Text(
