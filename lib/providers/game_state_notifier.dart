@@ -5,6 +5,7 @@ import '../models/question.dart';
 import '../repositories/elo_repository.dart';
 import '../services/bot_engine.dart';
 import '../services/elo_service.dart';
+import '../services/score_service.dart';
 
 /// Central game-state manager.
 ///
@@ -44,7 +45,6 @@ class GameStateNotifier extends StateNotifier<GameState> {
   ///
   /// [index] is the option the player tapped (0–3).
   /// [timeLeft] is the remaining seconds (0–15) used for the speed bonus.
-  /// Speed bonus = (timeLeft / 15 * 50).floor(), max 50 pts.
   void selectAnswer(int index, {required int timeLeft}) {
     // Guard: ignore taps after the answer is already locked in.
     if (state.isRevealing || state.isGameOver) return;
@@ -52,8 +52,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final correct = state.currentQuestion.correctIndex;
     final playerCorrect = index == correct;
 
-    final speedBonus = playerCorrect ? (timeLeft / 15 * 50).floor() : 0;
-    final playerPoints = playerCorrect ? 100 + speedBonus : 0;
+    final playerPoints =
+        ScoreService.calculatePoints(playerCorrect, timeLeft.toDouble());
 
     final botCorrect = BotEngine.didBotAnswer(state.difficulty);
     final botPoints = botCorrect ? 100 : 0;
