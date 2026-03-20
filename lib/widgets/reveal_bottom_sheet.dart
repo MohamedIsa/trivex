@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_state.dart';
-import '../models/round_result.dart';
 import '../providers/game_state_notifier.dart';
 import '../theme/app_colors.dart';
 import '../widgets/game_timer.dart';
@@ -91,16 +90,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
     final newState = ref.read(gameStateProvider);
 
     if (newState.isGameOver) {
-      Navigator.pushReplacementNamed(
-        context,
-        '/result',
-        arguments: RoundResult(
-          playerScore: newState.playerScore,
-          botScore: newState.botScore,
-          eloChange: 0, // ELO-001 handles this
-          newElo: 0,
-        ),
-      );
+      Navigator.pushReplacementNamed(context, '/result');
     } else {
       // Slide sheet down, then restart timer for the next question.
       _slideController.reverse().then((_) {

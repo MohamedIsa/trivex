@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/game_config.dart';
 import '../models/question.dart';
 import '../screens/game_screen.dart';
+import '../screens/result_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Screen stubs — full implementations live in the UI epic.
@@ -119,34 +120,7 @@ class RevealScreen extends StatelessWidget {
   }
 }
 
-class ResultScreen extends StatelessWidget {
-  const ResultScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A0A2E),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Result Screen — stub',
-              style: TextStyle(color: Color(0xFFF0EDF8)),
-            ),
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                  context, '/home', (r) => false),
-              child: const Text('Home',
-                  style: TextStyle(color: Color(0xFFA67FF5))),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Route generator — parse arguments for type-safe navigation.

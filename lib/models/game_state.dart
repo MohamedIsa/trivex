@@ -6,6 +6,7 @@ import '../services/elo_service.dart';
 /// Mutated only through [GameStateNotifier.copyWith].
 class GameState {
   final List<Question> questions;
+  final String topic;
   final String difficulty;
 
   /// Index of the currently displayed question (0–9).
@@ -28,6 +29,7 @@ class GameState {
 
   const GameState({
     required this.questions,
+    required this.topic,
     required this.difficulty,
     required this.currentIndex,
     required this.playerScore,
@@ -41,6 +43,7 @@ class GameState {
   /// Returns a new [GameState] with the supplied fields overridden.
   GameState copyWith({
     List<Question>? questions,
+    String? topic,
     String? difficulty,
     int? currentIndex,
     int? playerScore,
@@ -53,6 +56,7 @@ class GameState {
   }) {
     return GameState(
       questions: questions ?? this.questions,
+      topic: topic ?? this.topic,
       difficulty: difficulty ?? this.difficulty,
       currentIndex: currentIndex ?? this.currentIndex,
       playerScore: playerScore ?? this.playerScore,
@@ -71,6 +75,7 @@ class GameState {
   /// Blank slate used before [GameStateNotifier.initGame] is called.
   static const empty = GameState(
     questions: [],
+    topic: '',
     difficulty: 'medium',
     currentIndex: 0,
     playerScore: 0,

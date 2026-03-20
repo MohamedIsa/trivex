@@ -59,6 +59,7 @@ void main() {
     test('clearSelectedIndex sets selectedIndex to null', () {
       const s = GameState(
         questions: [],
+        topic: 'test',
         difficulty: 'easy',
         currentIndex: 0,
         playerScore: 0,

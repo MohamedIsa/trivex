@@ -21,10 +21,15 @@ class GameStateNotifier extends StateNotifier<GameState> {
   /// Resets all state and loads [questions] ready for a fresh round.
   ///
   /// [difficulty] is stored so [BotEngine.didBotAnswer] can receive it.
-  void initGame(List<Question> questions, {String difficulty = 'medium'}) {
+  void initGame(
+    List<Question> questions, {
+    String topic = '',
+    String difficulty = 'medium',
+  }) {
     assert(questions.isNotEmpty, 'questions must not be empty');
     state = GameState(
       questions: questions,
+      topic: topic,
       difficulty: difficulty,
       currentIndex: 0,
       playerScore: 0,
