@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
-  runApp(const MainApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  runApp(const ProviderScope(child: MainApp()));
 }
 
 class MainApp extends StatelessWidget {
@@ -11,8 +15,16 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       home: Scaffold(
+        backgroundColor: Color(0xFF1A0A2E),
         body: Center(
-          child: Text('Hello World!'),
+          child: Text(
+            'Trivex',
+            style: TextStyle(
+              color: Color(0xFFF0EDF8),
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
     );
