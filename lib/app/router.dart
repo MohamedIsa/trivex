@@ -2,66 +2,14 @@ import 'package:flutter/material.dart';
 import '../models/game_config.dart';
 import '../models/question.dart';
 import '../screens/game_screen.dart';
+import '../screens/home_screen.dart';
 import '../screens/result_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Screen stubs — full implementations live in the UI epic.
 // ---------------------------------------------------------------------------
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A0A2E),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            RichText(
-              text: const TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Triv',
-                    style: TextStyle(
-                      color: Color(0xFFF0EDF8),
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextSpan(
-                    text: 'ex',
-                    style: TextStyle(
-                      color: Color(0xFF00E5C3),
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C3AE8),
-                foregroundColor: const Color(0xFFF0EDF8),
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () =>
-                  Navigator.pushNamed(context, '/topic'),
-              child: const Text('Play',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class TopicScreen extends StatelessWidget {
   const TopicScreen({super.key});
