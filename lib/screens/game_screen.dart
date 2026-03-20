@@ -5,6 +5,7 @@ import '../models/game_state.dart';
 import '../providers/game_state_notifier.dart';
 import '../theme/app_colors.dart';
 import '../widgets/game_timer.dart';
+import '../widgets/reveal_bottom_sheet.dart';
 
 /// Game screen — core question loop (UI-004).
 ///
@@ -56,88 +57,96 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              // ── Top bar ──────────────────────────────────────────────────
-              _TopBar(state: state),
+              // ── Game content layer ────────────────────────────────────────
+              Column(
+                children: [
+                  // ── Top bar ──────────────────────────────────────────────
+                  _TopBar(state: state),
 
-              // ── Timer bar ────────────────────────────────────────────────
-              GameTimer(key: _timerKey),
-              _TimerBar(timerKey: _timerKey),
+                  // ── Timer bar ────────────────────────────────────────────
+                  GameTimer(key: _timerKey),
+                  _TimerBar(timerKey: _timerKey),
 
-              // ── Question + Tiles ─────────────────────────────────────────
-              Expanded(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Question text — slides in on each new question.
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        transitionBuilder: (child, animation) {
-                          final offsetAnimation = Tween<Offset>(
-                            begin: const Offset(0.05, 0),
-                            end: Offset.zero,
-                          ).animate(animation);
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: offsetAnimation,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: AnimatedOpacity(
-                          key: ValueKey(state.currentIndex),
-                          opacity: state.isRevealing ? 0.5 : 1.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Text(
-                            state.currentQuestion.question,
-                            style: const TextStyle(
-                              color: AppColors.foreground,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              height: 1.25,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Answer tiles
-                      Expanded(
-                        child: IgnorePointer(
-                          ignoring: state.isRevealing,
-                          child: ListView.separated(
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: state.currentQuestion.options.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (_, index) {
-                              return _AnswerTile(
-                                index: index,
-                                state: state,
-                                isPressed: _pressedIndex == index,
-                                onTapDown: () =>
-                                    setState(() => _pressedIndex = index),
-                                onTapUp: () {
-                                  setState(() => _pressedIndex = null);
-                                  _onTileTap(index, state);
-                                },
-                                onTapCancel: () =>
-                                    setState(() => _pressedIndex = null),
+                  // ── Question + Tiles ─────────────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Question text — slides in on each new question.
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (child, animation) {
+                              final offsetAnimation = Tween<Offset>(
+                                begin: const Offset(0.05, 0),
+                                end: Offset.zero,
+                              ).animate(animation);
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: offsetAnimation,
+                                  child: child,
+                                ),
                               );
                             },
+                            child: AnimatedOpacity(
+                              key: ValueKey(state.currentIndex),
+                              opacity: state.isRevealing ? 0.5 : 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Text(
+                                state.currentQuestion.question,
+                                style: const TextStyle(
+                                  color: AppColors.foreground,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+
+                          const SizedBox(height: 32),
+
+                          // Answer tiles
+                          Expanded(
+                            child: IgnorePointer(
+                              ignoring: state.isRevealing,
+                              child: ListView.separated(
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: state.currentQuestion.options.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (_, index) {
+                                  return _AnswerTile(
+                                    index: index,
+                                    state: state,
+                                    isPressed: _pressedIndex == index,
+                                    onTapDown: () =>
+                                        setState(() => _pressedIndex = index),
+                                    onTapUp: () {
+                                      setState(() => _pressedIndex = null);
+                                      _onTileTap(index, state);
+                                    },
+                                    onTapCancel: () =>
+                                        setState(() => _pressedIndex = null),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
+
+              // ── Reveal overlay (UI-005) ─────────────────────────────────
+              RevealBottomSheet(timerKey: _timerKey),
             ],
           ),
         ),
