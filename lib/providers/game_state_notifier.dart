@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
 import '../models/question.dart';
 import '../services/bot_engine.dart';
+import '../services/elo_service.dart';
 
 /// Central game-state manager.
 ///
@@ -58,10 +59,16 @@ class GameStateNotifier extends StateNotifier<GameState> {
   }
 
   /// Advances to the next question, or ends the game after Q10.
-  void nextQuestion() {
+  ///
+  /// [playerRating] is the player's current ELO before the round — used to
+  /// compute the ELO delta when the game ends. Defaults to 1000 (starting
+  /// rating) if not provided.
+  void nextQuestion({int playerRating = 1000}) {
     if (state.currentIndex >= 9) {
       // Last question was just revealed — game over.
-      state = state.copyWith(isGameOver: true);
+      final playerWon = state.playerScore > state.botScore;
+      final elo = EloService.calculate(playerRating, playerWon);
+      state = state.copyWith(isGameOver: true, eloResult: elo);
       return;
     }
     state = state.copyWith(

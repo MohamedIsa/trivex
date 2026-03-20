@@ -1,4 +1,5 @@
 import '../models/question.dart';
+import '../services/elo_service.dart';
 
 /// Immutable snapshot of all game state.
 ///
@@ -22,6 +23,9 @@ class GameState {
   /// True after the 10th question has been answered / timed out.
   final bool isGameOver;
 
+  /// Populated by [GameStateNotifier] when [isGameOver] becomes true.
+  final EloResult? eloResult;
+
   const GameState({
     required this.questions,
     required this.difficulty,
@@ -31,6 +35,7 @@ class GameState {
     required this.selectedIndex,
     required this.isRevealing,
     required this.isGameOver,
+    this.eloResult,
   });
 
   /// Returns a new [GameState] with the supplied fields overridden.
@@ -43,6 +48,7 @@ class GameState {
     int? selectedIndex,
     bool? isRevealing,
     bool? isGameOver,
+    EloResult? eloResult,
     bool clearSelectedIndex = false,
   }) {
     return GameState(
@@ -55,6 +61,7 @@ class GameState {
           clearSelectedIndex ? null : (selectedIndex ?? this.selectedIndex),
       isRevealing: isRevealing ?? this.isRevealing,
       isGameOver: isGameOver ?? this.isGameOver,
+      eloResult: eloResult ?? this.eloResult,
     );
   }
 
