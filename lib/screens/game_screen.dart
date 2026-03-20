@@ -29,7 +29,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  AnimationController? get _timerController => _timerKey.currentState?.controller;
+  AnimationController? get _timerController =>
+      _timerKey.currentState?.controller;
 
   void _onTileTap(int index, GameState state) {
     if (state.isRevealing || state.isGameOver) return;
@@ -40,7 +41,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         : 0;
 
     _timerKey.currentState?.cancel();
-    ref.read(gameStateProvider.notifier).selectAnswer(index, timeLeft: remaining);
+    ref
+        .read(gameStateProvider.notifier)
+        .selectAnswer(index, timeLeft: remaining);
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -74,8 +77,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   // ── Question + Tiles ─────────────────────────────────────
                   Expanded(
                     child: Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: kScreenPaddingH),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: kScreenPaddingH,
+                        vertical: kScreenPaddingH,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -171,7 +176,10 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: kScreenPaddingH,
+        vertical: 16,
+      ),
       decoration: BoxDecoration(
         color: AppColors.card,
         border: Border(bottom: BorderSide(color: AppColors.border)),
@@ -242,24 +250,26 @@ class _TimerBar extends StatelessWidget {
       );
     }
 
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        final remaining = 1.0 - controller.value;
-        return SizedBox(
-          height: kTimerBarHeight,
-          width: double.infinity,
-          child: Stack(
-            children: [
-              Container(color: AppColors.card),
-              FractionallySizedBox(
-                widthFactor: remaining,
-                child: Container(color: _barColor(remaining)),
-              ),
-            ],
-          ),
-        );
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (_, __) {
+          final remaining = 1.0 - controller.value;
+          return SizedBox(
+            height: kTimerBarHeight,
+            width: double.infinity,
+            child: Stack(
+              children: [
+                Container(color: AppColors.card),
+                FractionallySizedBox(
+                  widthFactor: remaining,
+                  child: Container(color: _barColor(remaining)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -288,8 +298,7 @@ class _AnswerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCorrectTile = index == state.currentQuestion.correctIndex;
-    final isSelectedWrong =
-        state.selectedIndex == index && !isCorrectTile;
+    final isSelectedWrong = state.selectedIndex == index && !isCorrectTile;
 
     // ── Resolve reveal colours ──────────────────────────────────────────
     Color bg;
@@ -367,10 +376,7 @@ class _AnswerTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   state.currentQuestion.options[index],
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: textColor, fontSize: 16),
                 ),
               ),
             ],

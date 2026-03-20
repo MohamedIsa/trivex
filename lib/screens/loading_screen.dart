@@ -45,17 +45,17 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
     super.initState();
 
     // Pulse: opacity 1→0.6→1, scale 1→0.98→1, 2s loop.
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: kWordmarkPulse,
-    )..repeat(reverse: true);
+    _pulseCtrl = AnimationController(vsync: this, duration: kWordmarkPulse)
+      ..repeat(reverse: true);
 
-    _pulseOpacity = Tween<double>(begin: 1.0, end: 0.6).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve),
-    );
-    _pulseScale = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve),
-    );
+    _pulseOpacity = Tween<double>(
+      begin: 1.0,
+      end: 0.6,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve));
+    _pulseScale = Tween<double>(
+      begin: 1.0,
+      end: 0.98,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve));
 
     // Fade in.
     Future.microtask(() {
@@ -92,13 +92,16 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
     }
 
     try {
-      final questions =
-          await QuestionService(client: _client).fetchQuestions(config);
+      final questions = await QuestionService(
+        client: _client,
+      ).fetchQuestions(config);
 
       if (_cancelled || !mounted) return;
 
       // Initialise game state before navigating.
-      ref.read(gameStateProvider.notifier).initGame(
+      ref
+          .read(gameStateProvider.notifier)
+          .initGame(
             questions,
             topic: config.topic,
             difficulty: config.difficulty,
@@ -162,10 +165,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
           builder: (_, child) {
             return Opacity(
               opacity: _pulseOpacity.value,
-              child: Transform.scale(
-                scale: _pulseScale.value,
-                child: child,
-              ),
+              child: Transform.scale(scale: _pulseScale.value, child: child),
             );
           },
           child: RichText(
@@ -196,10 +196,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
         // Subtitle.
         const Text(
           'Generating questions…',
-          style: TextStyle(
-            color: AppColors.foreground,
-            fontSize: 18,
-          ),
+          style: TextStyle(color: AppColors.foreground, fontSize: 18),
         ),
         const SizedBox(height: 48),
 
@@ -211,10 +208,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
             child: Center(
               child: Text(
                 'Cancel',
-                style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: AppColors.muted, fontSize: 16),
               ),
             ),
           ),
@@ -256,10 +250,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
         Text(
           _error!,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: AppColors.red,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: AppColors.red, fontSize: 16),
         ),
         const SizedBox(height: 32),
 
@@ -299,10 +290,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
             child: Center(
               child: Text(
                 'Cancel',
-                style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: AppColors.muted, fontSize: 16),
               ),
             ),
           ),

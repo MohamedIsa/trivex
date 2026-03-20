@@ -37,10 +37,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
 
     // 6 sections with 100 ms stagger (100 ms – 600 ms).
     _entryControllers = List.generate(6, (i) {
-      return AnimationController(
-        vsync: this,
-        duration: kEntryDuration,
-      );
+      return AnimationController(vsync: this, duration: kEntryDuration);
     });
 
     _fadeAnimations = _entryControllers
@@ -50,9 +47,12 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
 
     _slideAnimations = _entryControllers
         .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
-        .map((c) =>
-            Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-                .animate(c))
+        .map(
+          (c) => Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(c),
+        )
         .toList();
 
     // Fire staggered.
@@ -101,10 +101,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     Navigator.pushReplacementNamed(
       context,
       '/loading',
-      arguments: GameConfig(
-        topic: state.topic,
-        difficulty: state.difficulty,
-      ),
+      arguments: GameConfig(topic: state.topic, difficulty: state.difficulty),
     );
   }
 
@@ -148,7 +145,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: 32),
+            padding: const EdgeInsets.symmetric(
+              horizontal: kScreenPaddingH,
+              vertical: 32,
+            ),
             child: Column(
               children: [
                 const Spacer(),
@@ -204,15 +204,15 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                     isTie
                         ? 'Draw'
                         : isWin
-                            ? 'Victory'
-                            : 'Defeat',
+                        ? 'Victory'
+                        : 'Defeat',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: isTie
                           ? AppColors.muted
                           : isWin
-                              ? AppColors.teal
-                              : AppColors.red,
+                          ? AppColors.teal
+                          : AppColors.red,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -239,16 +239,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                   child: Column(
                     children: [
                       // Play Again
-                      _PrimaryButton(
-                        label: 'Play Again',
-                        onTap: _playAgain,
-                      ),
+                      _PrimaryButton(label: 'Play Again', onTap: _playAgain),
                       const SizedBox(height: 12),
                       // New Topic
-                      _OutlinedButton(
-                        label: 'New Topic',
-                        onTap: _newTopic,
-                      ),
+                      _OutlinedButton(label: 'New Topic', onTap: _newTopic),
                     ],
                   ),
                 ),
@@ -285,10 +279,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
   Widget _staggerWrap(int index, {required Widget child}) {
     return FadeTransition(
       opacity: _fadeAnimations[index],
-      child: SlideTransition(
-        position: _slideAnimations[index],
-        child: child,
-      ),
+      child: SlideTransition(position: _slideAnimations[index], child: child),
     );
   }
 }
@@ -317,8 +308,8 @@ class _ScoreCard extends StatelessWidget {
     final borderColor = isTie
         ? AppColors.mutedFaint
         : isWinner
-            ? AppColors.primary
-            : Colors.transparent;
+        ? AppColors.primary
+        : Colors.transparent;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -326,9 +317,7 @@ class _ScoreCard extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 2),
-        boxShadow: isWinner && !isTie
-            ? [AppShadows.primaryGlowStrong]
-            : null,
+        boxShadow: isWinner && !isTie ? [AppShadows.primaryGlowStrong] : null,
       ),
       child: Column(
         children: [
@@ -373,10 +362,10 @@ class _EloRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final deltaBgColor = _deltaColor.withValues(alpha: 0.2);
-    final deltaText =
-        delta > 0 ? '+$delta' : (delta == 0 ? '0' : '$delta');
-    final deltaIcon =
-        delta > 0 ? Icons.trending_up : (delta < 0 ? Icons.trending_down : null);
+    final deltaText = delta > 0 ? '+$delta' : (delta == 0 ? '0' : '$delta');
+    final deltaIcon = delta > 0
+        ? Icons.trending_up
+        : (delta < 0 ? Icons.trending_down : null);
 
     final line = Container(
       width: kBadgeSize,
@@ -386,9 +375,9 @@ class _EloRow extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(kCardPadding),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(kCardRadius),
+        borderRadius: BorderRadius.all(Radius.circular(kCardRadius)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -519,9 +508,7 @@ class _OutlinedButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(kButtonRadius),
-          border: Border.all(
-            color: AppColors.mutedMedium,
-          ),
+          border: Border.all(color: AppColors.mutedMedium),
         ),
         alignment: Alignment.center,
         child: Text(

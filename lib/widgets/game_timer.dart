@@ -28,10 +28,7 @@ class GameTimerState extends ConsumerState<GameTimer>
   void initState() {
     super.initState();
 
-    controller = AnimationController(
-      vsync: this,
-      duration: kTimerDuration,
-    );
+    controller = AnimationController(vsync: this, duration: kTimerDuration);
 
     controller.addStatusListener(_onStatus);
 

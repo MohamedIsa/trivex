@@ -41,42 +41,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.initState();
 
     // Wordmark — 0 ms delay, 500 ms duration.
-    _wordmarkCtrl = AnimationController(
-      vsync: this,
-      duration: kEntryDuration,
-    );
-    _wordmarkFade = CurvedAnimation(
-      parent: _wordmarkCtrl,
-      curve: kEntryCurve,
-    );
+    _wordmarkCtrl = AnimationController(vsync: this, duration: kEntryDuration);
+    _wordmarkFade = CurvedAnimation(parent: _wordmarkCtrl, curve: kEntryCurve);
     _wordmarkSlide = Tween<Offset>(
       begin: const Offset(-0.15, 0),
       end: Offset.zero,
     ).animate(_wordmarkFade);
 
     // ELO group — 200 ms delay, 500 ms duration.
-    _eloCtrl = AnimationController(
-      vsync: this,
-      duration: kEntryDuration,
-    );
-    _eloFade = CurvedAnimation(
-      parent: _eloCtrl,
-      curve: kEntryCurve,
-    );
+    _eloCtrl = AnimationController(vsync: this, duration: kEntryDuration);
+    _eloFade = CurvedAnimation(parent: _eloCtrl, curve: kEntryCurve);
     _eloSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,
     ).animate(_eloFade);
 
     // Play button — 600 ms delay, 500 ms duration.
-    _buttonCtrl = AnimationController(
-      vsync: this,
-      duration: kEntryDuration,
-    );
-    _buttonFade = CurvedAnimation(
-      parent: _buttonCtrl,
-      curve: kEntryCurve,
-    );
+    _buttonCtrl = AnimationController(vsync: this, duration: kEntryDuration);
+    _buttonFade = CurvedAnimation(parent: _buttonCtrl, curve: kEntryCurve);
     _buttonSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,
@@ -116,18 +98,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           error: (_, __) => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
           ),
-          data: (history) => _buildContent(
-            history.isEmpty ? 1000 : history.last.rating,
-          ),
+          data: (history) =>
+              _buildContent(history.isEmpty ? 1000 : history.last.rating),
         ),
       ),
     );
   }
 
   Widget _buildContent(int rating) {
-
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: kScreenPaddingH),
+      padding: const EdgeInsets.symmetric(
+        horizontal: kScreenPaddingH,
+        vertical: kScreenPaddingH,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -187,10 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   const Center(
                     child: Text(
                       'Your Rating',
-                      style: TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: AppColors.muted, fontSize: 16),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -199,7 +179,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   const SizedBox(
                     height: 96,
                     width: double.infinity,
-                    child: EloSparkline(),
+                    child: RepaintBoundary(child: EloSparkline()),
                   ),
                 ],
               ),

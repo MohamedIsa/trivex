@@ -16,10 +16,7 @@ import '../widgets/game_timer.dart';
 /// Shows result icon, heading, explanation box, and Next / Results button.
 /// Mounted as a [Stack] child inside [GameScreen].
 class RevealBottomSheet extends ConsumerStatefulWidget {
-  const RevealBottomSheet({
-    super.key,
-    required this.timerKey,
-  });
+  const RevealBottomSheet({super.key, required this.timerKey});
 
   /// Used to call [GameTimerState.restart] when the player taps "Next".
   final GlobalKey<GameTimerState> timerKey;
@@ -47,10 +44,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
     _offsetAnimation = Tween<Offset>(
       begin: const Offset(0, 1), // fully off-screen below
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: kSpringCurve,
-    ));
+    ).animate(CurvedAnimation(parent: _slideController, curve: kSpringCurve));
   }
 
   @override
@@ -69,7 +63,9 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
 
   void _syncSheet() {
     final isRevealing = ref.read(gameStateProvider).isRevealing;
-    if (isRevealing && !_slideController.isAnimating && _slideController.value == 0) {
+    if (isRevealing &&
+        !_slideController.isAnimating &&
+        _slideController.value == 0) {
       _slideController.forward();
     }
   }
@@ -101,9 +97,11 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
 
     // Drive slide in/out reactively via ref.listen (not a side effect in build).
     ref.listen<GameState>(gameStateProvider, (previous, next) {
-      if (next.isRevealing && _slideController.status == AnimationStatus.dismissed) {
+      if (next.isRevealing &&
+          _slideController.status == AnimationStatus.dismissed) {
         _slideController.forward();
-      } else if (!next.isRevealing && _slideController.status == AnimationStatus.completed) {
+      } else if (!next.isRevealing &&
+          _slideController.status == AnimationStatus.completed) {
         _slideController.reverse();
       }
     });
@@ -124,9 +122,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
                 child: ClipRect(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                    child: Container(
-                      color: AppColors.backdropOverlay,
-                    ),
+                    child: Container(color: AppColors.backdropOverlay),
                   ),
                 ),
               ),
@@ -135,17 +131,19 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
             // ── Bottom sheet panel ────────────────────────────────────────
             Align(
               alignment: Alignment.bottomCenter,
-              child: SlideTransition(
-                position: _offsetAnimation,
-                child: _SheetPanel(
-                  state: state,
-                  isNextPressed: _nextPressed,
-                  onNextTapDown: () => setState(() => _nextPressed = true),
-                  onNextTapUp: () {
-                    setState(() => _nextPressed = false);
-                    _onNextTap();
-                  },
-                  onNextTapCancel: () => setState(() => _nextPressed = false),
+              child: RepaintBoundary(
+                child: SlideTransition(
+                  position: _offsetAnimation,
+                  child: _SheetPanel(
+                    state: state,
+                    isNextPressed: _nextPressed,
+                    onNextTapDown: () => setState(() => _nextPressed = true),
+                    onNextTapUp: () {
+                      setState(() => _nextPressed = false);
+                      _onNextTap();
+                    },
+                    onNextTapCancel: () => setState(() => _nextPressed = false),
+                  ),
                 ),
               ),
             ),
@@ -196,7 +194,12 @@ class _SheetPanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(kCardPadding, kCardPadding, kCardPadding, 32),
+      padding: const EdgeInsets.fromLTRB(
+        kCardPadding,
+        kCardPadding,
+        kCardPadding,
+        32,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(kCardPadding)),
@@ -237,19 +240,16 @@ class _SheetPanel extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.background,
-              borderRadius: BorderRadius.circular(kButtonRadius),
+              borderRadius: BorderRadius.all(Radius.circular(kButtonRadius)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Correct: $correctLetter',
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 14),
                 ),
                 const SizedBox(height: 8),
                 Text(

@@ -28,10 +28,7 @@ class EloSparkline extends ConsumerWidget {
             child: Text(
               'Play your first round to see your rating history',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.muted,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: AppColors.muted, fontSize: 14),
             ),
           );
         }
@@ -39,8 +36,7 @@ class EloSparkline extends ConsumerWidget {
         final spots = history
             .asMap()
             .entries
-            .map((e) =>
-                FlSpot(e.key.toDouble(), e.value.rating.toDouble()))
+            .map((e) => FlSpot(e.key.toDouble(), e.value.rating.toDouble()))
             .toList();
 
         final ratings = history.map((r) => r.rating);
@@ -68,10 +64,7 @@ class EloSparkline extends ConsumerWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      AppColors.accentGlow,
-                      AppColors.accentTransparent,
-                    ],
+                    colors: [AppColors.accentGlow, AppColors.accentTransparent],
                   ),
                 ),
               ),

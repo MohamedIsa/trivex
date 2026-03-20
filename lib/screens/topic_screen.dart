@@ -75,7 +75,10 @@ class _TopicScreenState extends State<TopicScreen>
           child: SlideTransition(
             position: _entrySlide,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: kScreenPaddingH, vertical: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: kScreenPaddingH,
+                vertical: 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -122,18 +125,14 @@ class _TopicScreenState extends State<TopicScreen>
                       filled: true,
                       fillColor: AppColors.background,
                       hintText: 'e.g. The Roman Empire',
-                      hintStyle: TextStyle(
-                        color: AppColors.mutedHalf,
-                      ),
+                      hintStyle: TextStyle(color: AppColors.mutedHalf),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 16,
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(kButtonRadius),
-                        borderSide: BorderSide(
-                          color: AppColors.mutedSubtle,
-                        ),
+                        borderSide: BorderSide(color: AppColors.mutedSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(kButtonRadius),
@@ -173,10 +172,7 @@ class _TopicScreenState extends State<TopicScreen>
                   const Spacer(),
 
                   // ── Start button ──────────────────────────────────────
-                  _StartButton(
-                    enabled: _canStart,
-                    onTap: _start,
-                  ),
+                  _StartButton(enabled: _canStart, onTap: _start),
 
                   const SizedBox(height: 24),
                 ],
@@ -217,14 +213,8 @@ class _DifficultyPill extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(kChipRadius),
-            border: selected
-                ? null
-                : Border.all(
-                    color: AppColors.mutedSubtle,
-                  ),
-            boxShadow: selected
-                ? [AppShadows.primaryGlowSmall]
-                : null,
+            border: selected ? null : Border.all(color: AppColors.mutedSubtle),
+            boxShadow: selected ? [AppShadows.primaryGlowSmall] : null,
           ),
           alignment: Alignment.center,
           child: Text(
@@ -260,17 +250,13 @@ class _StartButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: enabled ? AppColors.primary : AppColors.card,
           borderRadius: BorderRadius.circular(kButtonRadius),
-          boxShadow: enabled
-              ? [AppShadows.primaryGlow]
-              : null,
+          boxShadow: enabled ? [AppShadows.primaryGlow] : null,
         ),
         alignment: Alignment.center,
         child: Text(
           'Start',
           style: TextStyle(
-            color: enabled
-                ? AppColors.foreground
-                : AppColors.mutedSubtle,
+            color: enabled ? AppColors.foreground : AppColors.mutedSubtle,
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
