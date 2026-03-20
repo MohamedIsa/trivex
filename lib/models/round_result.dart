@@ -11,4 +11,18 @@ class RoundResult {
     required this.eloChange,
     required this.newElo,
   });
+
+  factory RoundResult.fromJson(Map<String, dynamic> json) => RoundResult(
+        playerScore: json['playerScore'] as int,
+        botScore: json['botScore'] as int,
+        eloChange: json['eloChange'] as int,
+        newElo: json['newElo'] as int,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'playerScore': playerScore,
+        'botScore': botScore,
+        'eloChange': eloChange,
+        'newElo': newElo,
+      };
 }
