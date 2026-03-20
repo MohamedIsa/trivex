@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_config.dart';
 import '../models/question.dart';
+import '../screens/game_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Screen stubs — full implementations live in the UI epic.
@@ -93,26 +94,6 @@ class LoadingScreen extends StatelessWidget {
         body: Center(
           child: Text(
             'Loading Screen — stub',
-            style: TextStyle(color: Color(0xFFF0EDF8)),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class GameScreen extends StatelessWidget {
-  const GameScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: const Scaffold(
-        backgroundColor: Color(0xFF1A0A2E),
-        body: Center(
-          child: Text(
-            'Game Screen — stub',
             style: TextStyle(color: Color(0xFFF0EDF8)),
           ),
         ),
