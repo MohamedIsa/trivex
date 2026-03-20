@@ -1,13 +1,18 @@
 import 'dart:math';
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../constants/game_constants.dart';
 
-/// Result of an ELO recalculation after a round.
-class EloResult {
-  final int newRating;
-  final int delta;
+part 'elo_service.freezed.dart';
 
-  const EloResult({required this.newRating, required this.delta});
+/// Result of an ELO recalculation after a round.
+@freezed
+class EloResult with _$EloResult {
+  const factory EloResult({
+    required int newRating,
+    required int delta,
+  }) = _EloResult;
 }
 
 /// Stateless service that computes ELO rating changes using the standard

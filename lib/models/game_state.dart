@@ -1,73 +1,39 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../models/question.dart';
 import '../services/elo_service.dart';
 
+part 'game_state.freezed.dart';
+
 /// Immutable snapshot of all game state.
 ///
-/// Mutated only through [GameStateNotifier.copyWith].
-class GameState {
-  final List<Question> questions;
-  final String topic;
-  final String difficulty;
+/// Mutated only through [GameStateNotifier] methods.
+@freezed
+class GameState with _$GameState {
+  const GameState._();
 
-  /// Index of the currently displayed question (0–9).
-  final int currentIndex;
+  const factory GameState({
+    required List<Question> questions,
+    required String topic,
+    required String difficulty,
 
-  final int playerScore;
-  final int botScore;
+    /// Index of the currently displayed question (0–9).
+    required int currentIndex,
+    required int playerScore,
+    required int botScore,
 
-  /// The option index the player tapped, or null if no selection has been made.
-  final int? selectedIndex;
-
-  /// True while the answer reveal animation / panel is visible.
-  final bool isRevealing;
-
-  /// True after the 10th question has been answered / timed out.
-  final bool isGameOver;
-
-  /// Populated by [GameStateNotifier] when [isGameOver] becomes true.
-  final EloResult? eloResult;
-
-  const GameState({
-    required this.questions,
-    required this.topic,
-    required this.difficulty,
-    required this.currentIndex,
-    required this.playerScore,
-    required this.botScore,
-    required this.selectedIndex,
-    required this.isRevealing,
-    required this.isGameOver,
-    this.eloResult,
-  });
-
-  /// Returns a new [GameState] with the supplied fields overridden.
-  GameState copyWith({
-    List<Question>? questions,
-    String? topic,
-    String? difficulty,
-    int? currentIndex,
-    int? playerScore,
-    int? botScore,
+    /// The option index the player tapped, or null if no selection has been made.
     int? selectedIndex,
-    bool? isRevealing,
-    bool? isGameOver,
+
+    /// True while the answer reveal animation / panel is visible.
+    required bool isRevealing,
+
+    /// True after the 10th question has been answered / timed out.
+    required bool isGameOver,
+
+    /// Populated by [GameStateNotifier] when [isGameOver] becomes true.
     EloResult? eloResult,
-    bool clearSelectedIndex = false,
-  }) {
-    return GameState(
-      questions: questions ?? this.questions,
-      topic: topic ?? this.topic,
-      difficulty: difficulty ?? this.difficulty,
-      currentIndex: currentIndex ?? this.currentIndex,
-      playerScore: playerScore ?? this.playerScore,
-      botScore: botScore ?? this.botScore,
-      selectedIndex:
-          clearSelectedIndex ? null : (selectedIndex ?? this.selectedIndex),
-      isRevealing: isRevealing ?? this.isRevealing,
-      isGameOver: isGameOver ?? this.isGameOver,
-      eloResult: eloResult ?? this.eloResult,
-    );
-  }
+  }) = _GameState;
 
   /// Convenience: the question currently on-screen.
   Question get currentQuestion => questions[currentIndex];
@@ -80,7 +46,6 @@ class GameState {
     currentIndex: 0,
     playerScore: 0,
     botScore: 0,
-    selectedIndex: null,
     isRevealing: false,
     isGameOver: false,
   );

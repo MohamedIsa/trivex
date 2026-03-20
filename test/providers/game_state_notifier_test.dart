@@ -56,9 +56,9 @@ void main() {
       expect(s2.botScore, 0); // unchanged
     });
 
-    test('clearSelectedIndex sets selectedIndex to null', () {
-      const s = GameState(
-        questions: [],
+    test('copyWith(selectedIndex: null) clears selectedIndex', () {
+      final s = GameState(
+        questions: const [],
         topic: 'test',
         difficulty: 'easy',
         currentIndex: 0,
@@ -68,7 +68,7 @@ void main() {
         isRevealing: false,
         isGameOver: false,
       );
-      final s2 = s.copyWith(clearSelectedIndex: true);
+      final s2 = s.copyWith(selectedIndex: null);
       expect(s2.selectedIndex, isNull);
     });
   });

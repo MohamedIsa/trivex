@@ -1,18 +1,19 @@
-/// Question model — deserialized from the Worker API response.
-class Question {
-  final String id;
-  final String question;
-  final List<String> options; // always length 4
-  final int correctIndex; // 0–3
-  final String explanation;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const Question({
-    required this.id,
-    required this.question,
-    required this.options,
-    required this.correctIndex,
-    required this.explanation,
-  });
+part 'question.freezed.dart';
+
+/// Question model — deserialized from the Worker API response.
+@Freezed(fromJson: false, toJson: false)
+class Question with _$Question {
+  const Question._();
+
+  const factory Question({
+    required String id,
+    required String question,
+    required List<String> options, // always length 4
+    required int correctIndex, // 0–3
+    required String explanation,
+  }) = _Question;
 
   factory Question.fromJson(Map<String, dynamic> json) {
     final rawOptions = json['options'] as List<dynamic>;

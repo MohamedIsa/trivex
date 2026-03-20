@@ -1,11 +1,18 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'game_config.freezed.dart';
+
 /// GameConfig — passed from the Topic screen through to the Loading/Game screens.
-class GameConfig {
-  final String topic;
+@Freezed(fromJson: false, toJson: false)
+class GameConfig with _$GameConfig {
+  const GameConfig._();
 
-  /// One of: 'easy' | 'medium' | 'hard'
-  final String difficulty;
+  const factory GameConfig({
+    required String topic,
 
-  const GameConfig({required this.topic, required this.difficulty});
+    /// One of: 'easy' | 'medium' | 'hard'
+    required String difficulty,
+  }) = _GameConfig;
 
   factory GameConfig.fromJson(Map<String, dynamic> json) => GameConfig(
         topic: json['topic'] as String,

@@ -1,16 +1,18 @@
-/// RoundResult — produced at the end of a game round and passed to UI-006.
-class RoundResult {
-  final int playerScore;
-  final int botScore;
-  final int eloChange;
-  final int newElo;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const RoundResult({
-    required this.playerScore,
-    required this.botScore,
-    required this.eloChange,
-    required this.newElo,
-  });
+part 'round_result.freezed.dart';
+
+/// RoundResult — produced at the end of a game round and passed to UI-006.
+@Freezed(fromJson: false, toJson: false)
+class RoundResult with _$RoundResult {
+  const RoundResult._();
+
+  const factory RoundResult({
+    required int playerScore,
+    required int botScore,
+    required int eloChange,
+    required int newElo,
+  }) = _RoundResult;
 
   factory RoundResult.fromJson(Map<String, dynamic> json) => RoundResult(
         playerScore: json['playerScore'] as int,

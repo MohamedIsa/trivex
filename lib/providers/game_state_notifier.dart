@@ -81,7 +81,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
     }
     state = state.copyWith(
       currentIndex: state.currentIndex + 1,
-      clearSelectedIndex: true,
+      selectedIndex: null,
       isRevealing: false,
     );
   }
