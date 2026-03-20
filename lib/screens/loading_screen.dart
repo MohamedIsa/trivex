@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/game_config.dart';
 import '../providers/game_state_notifier.dart';
@@ -21,6 +22,10 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseOpacity;
   late final Animation<double> _pulseScale;
+
+  // ── HTTP client (owned, closed on dispose) ───────────────────────────────
+
+  final http.Client _client = http.Client();
 
   // ── State ─────────────────────────────────────────────────────────────────
 
@@ -60,6 +65,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
   @override
   void dispose() {
     _cancelled = true;
+    _client.close();
     _pulseCtrl.dispose();
     super.dispose();
   }
@@ -83,7 +89,8 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
     }
 
     try {
-      final questions = await QuestionService().fetchQuestions(config);
+      final questions =
+          await QuestionService(client: _client).fetchQuestions(config);
 
       if (_cancelled || !mounted) return;
 

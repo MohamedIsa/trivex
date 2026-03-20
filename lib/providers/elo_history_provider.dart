@@ -7,5 +7,5 @@ import '../repositories/elo_repository.dart';
 ///
 /// Used by [EloSparkline] — no network call, resolves instantly.
 final eloHistoryProvider = FutureProvider<List<EloRecord>>((ref) {
-  return ref.read(eloRepositoryProvider).getHistory();
+  return ref.watch(eloRepositoryProvider).getHistory();
 });

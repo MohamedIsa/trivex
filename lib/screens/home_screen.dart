@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/elo_history_provider.dart';
-import '../repositories/elo_repository.dart';
 import '../theme/app_colors.dart';
 import '../widgets/elo_sparkline.dart';
 
@@ -114,14 +113,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           error: (_, __) => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
           ),
-          data: (_) => _buildContent(),
+          data: (history) => _buildContent(
+            history.isEmpty ? 1000 : history.last.rating,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildContent() {
-    final rating = ref.read(eloRepositoryProvider).getCurrentRating();
+  Widget _buildContent(int rating) {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),

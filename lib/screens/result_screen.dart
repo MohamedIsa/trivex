@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_config.dart';
+import '../providers/elo_history_provider.dart';
 import '../providers/game_state_notifier.dart';
 import '../repositories/elo_repository.dart';
 import '../theme/app_colors.dart';
@@ -76,6 +77,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     final eloResult = state.eloResult;
     if (eloResult != null) {
       await eloRepo.saveResult(eloResult);
+      ref.invalidate(eloHistoryProvider);
     }
   }
 

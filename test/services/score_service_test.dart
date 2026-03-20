@@ -25,5 +25,21 @@ void main() {
       // 100 + (10/15 * 50).round() = 100 + 33 = 133
       expect(ScoreService.calculatePoints(true, 10.0), 133);
     });
+
+    test('correct at 7s — .round() yields 23 bonus, not .floor() 23', () {
+      // 7/15 * 50 = 23.333…  → .round() = 23, .floor() = 23 (same here)
+      // Use 8s where they diverge: 8/15*50 = 26.667 → .round() = 27
+      expect(ScoreService.calculatePoints(true, 8.0), 127);
+    });
+
+    test('correct at 1s — .round() yields 3 bonus (not .floor() 3)', () {
+      // 1/15 * 50 = 3.333… → .round() = 3
+      expect(ScoreService.calculatePoints(true, 1.0), 103);
+    });
+
+    test('correct at 11s — .round() yields 37 bonus (diverges from .floor())', () {
+      // 11/15 * 50 = 36.667 → .round() = 37, .floor() would be 36
+      expect(ScoreService.calculatePoints(true, 11.0), 137);
+    });
   });
 }

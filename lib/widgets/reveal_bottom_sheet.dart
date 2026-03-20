@@ -71,15 +71,6 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
     }
   }
 
-  // Called every frame by the Consumer rebuild.
-  void _handleRevealChange(bool isRevealing) {
-    if (isRevealing && _slideController.status == AnimationStatus.dismissed) {
-      _slideController.forward();
-    } else if (!isRevealing && _slideController.status == AnimationStatus.completed) {
-      _slideController.reverse();
-    }
-  }
-
   // ── Next / Results tap ────────────────────────────────────────────────────
 
   void _onNextTap() {
@@ -105,8 +96,14 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
   Widget build(BuildContext context) {
     final state = ref.watch(gameStateProvider);
 
-    // Drive slide in/out reactively.
-    _handleRevealChange(state.isRevealing);
+    // Drive slide in/out reactively via ref.listen (not a side effect in build).
+    ref.listen<GameState>(gameStateProvider, (previous, next) {
+      if (next.isRevealing && _slideController.status == AnimationStatus.dismissed) {
+        _slideController.forward();
+      } else if (!next.isRevealing && _slideController.status == AnimationStatus.completed) {
+        _slideController.reverse();
+      }
+    });
 
     // Don't render anything when fully hidden and not animating.
     return AnimatedBuilder(

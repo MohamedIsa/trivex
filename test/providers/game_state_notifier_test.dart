@@ -234,7 +234,7 @@ void main() {
   // ── speed bonus edge cases ────────────────────────────────────────────────
 
   group('speed bonus formula', () {
-    test('timeLeft=7 yields floor(7/15*50) = 23 bonus pts', () {
+    test('timeLeft=7 yields round(7/15*50) = 23 bonus pts', () {
       final notifier = _notifier();
       notifier.initGame(_tenQuestions(), difficulty: 'medium');
       notifier.selectAnswer(0, timeLeft: 7);
