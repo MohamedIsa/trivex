@@ -8,6 +8,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(EloRecordAdapter());
+  await Hive.openBox<EloRecord>('elo_history');
   runApp(const ProviderScope(child: MainApp()));
 }
 

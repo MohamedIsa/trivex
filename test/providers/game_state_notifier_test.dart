@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/models/game_state.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
+import 'package:trivex/repositories/elo_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -17,13 +20,30 @@ Question _q(int i) => Question(
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
-GameStateNotifier _notifier() => GameStateNotifier();
+late EloRepository _eloRepo;
+
+GameStateNotifier _notifier() => GameStateNotifier(_eloRepo);
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 void main() {
+  setUpAll(() async {
+    Hive.init('/tmp/hive_test_game_state');
+    Hive.registerAdapter(EloRecordAdapter());
+    await Hive.openBox<EloRecord>(EloRepository.boxName);
+    _eloRepo = EloRepository();
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+  });
+
+  setUp(() async {
+    final box = Hive.box<EloRecord>(EloRepository.boxName);
+    await box.clear();
+  });
   // ── GameState immutability / copyWith ─────────────────────────────────────
 
   group('GameState.copyWith', () {

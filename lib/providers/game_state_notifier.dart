@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_state.dart';
 import '../models/question.dart';
+import '../repositories/elo_repository.dart';
 import '../services/bot_engine.dart';
 import '../services/elo_service.dart';
 
@@ -11,7 +12,9 @@ import '../services/elo_service.dart';
 /// The timer (GAME-003) drives [timeExpired].
 /// ELO calculation (ELO-001) reads [state] after [isGameOver] becomes true.
 class GameStateNotifier extends StateNotifier<GameState> {
-  GameStateNotifier() : super(GameState.empty);
+  GameStateNotifier(this._eloRepository) : super(GameState.empty);
+
+  final EloRepository _eloRepository;
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -60,12 +63,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
   /// Advances to the next question, or ends the game after Q10.
   ///
-  /// [playerRating] is the player's current ELO before the round — used to
-  /// compute the ELO delta when the game ends. Defaults to 1000 (starting
-  /// rating) if not provided.
-  void nextQuestion({int playerRating = 1000}) {
+  /// When the game ends, the player's current persisted ELO is read from
+  /// [EloRepository] and the delta is computed via [EloService].
+  void nextQuestion() {
     if (state.currentIndex >= 9) {
       // Last question was just revealed — game over.
+      final playerRating = _eloRepository.getCurrentRating();
       final playerWon = state.playerScore > state.botScore;
       final elo = EloService.calculate(playerRating, playerWon);
       state = state.copyWith(isGameOver: true, eloResult: elo);
@@ -98,5 +101,6 @@ class GameStateNotifier extends StateNotifier<GameState> {
 /// The single game-state provider consumed by all game UI widgets.
 final gameStateProvider =
     StateNotifierProvider<GameStateNotifier, GameState>((ref) {
-  return GameStateNotifier();
+  final eloRepo = ref.watch(eloRepositoryProvider);
+  return GameStateNotifier(eloRepo);
 });
