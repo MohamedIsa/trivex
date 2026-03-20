@@ -4,6 +4,7 @@ import '../models/question.dart';
 import '../screens/game_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/result_screen.dart';
+import '../screens/topic_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Screen stubs — full implementations live in the UI epic.
@@ -11,22 +12,7 @@ import '../screens/result_screen.dart';
 
 
 
-class TopicScreen extends StatelessWidget {
-  const TopicScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFF1A0A2E),
-      body: Center(
-        child: Text(
-          'Topic Screen — stub',
-          style: TextStyle(color: Color(0xFFF0EDF8)),
-        ),
-      ),
-    );
-  }
-}
 
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
