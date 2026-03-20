@@ -3,6 +3,7 @@ import '../models/game_config.dart';
 import '../models/question.dart';
 import '../screens/game_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/loading_screen.dart';
 import '../screens/result_screen.dart';
 import '../screens/topic_screen.dart';
 
@@ -14,28 +15,7 @@ import '../screens/topic_screen.dart';
 
 
 
-class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) Navigator.pushReplacementNamed(context, '/topic');
-      },
-      child: const Scaffold(
-        backgroundColor: Color(0xFF1A0A2E),
-        body: Center(
-          child: Text(
-            'Loading Screen — stub',
-            style: TextStyle(color: Color(0xFFF0EDF8)),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class RevealScreen extends StatelessWidget {
   const RevealScreen({super.key});
