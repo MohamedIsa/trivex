@@ -1,10 +1,10 @@
 /**
  * Trivex Worker — Cloudflare Workers backend
- * POST /generate  → returns 10 trivia questions (stub for WORKER-001)
+ * POST /generate  → calls Workers AI and returns trivia questions (WORKER-002)
  */
 
 export interface Env {
-  OPENAI_API_KEY: string;
+  AI: Ai;
   LLM_MODEL?: string;
 }
 
@@ -29,6 +29,11 @@ interface GenerateResponse {
 interface ErrorResponse {
   error: string;
   retryable: boolean;
+}
+
+// Workers AI chat response shape
+interface WorkersAIResponse {
+  response: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,83 +63,105 @@ function errorResponse(error: string, retryable: boolean, status: number): Respo
 }
 
 // ---------------------------------------------------------------------------
-// Stub questions — 10 hardcoded dummies for WORKER-001 (replaced in WORKER-002)
+// Difficulty wording — influences the user prompt sent to the LLM
 // ---------------------------------------------------------------------------
 
-function buildStubQuestions(topic: string, _difficulty: string): Question[] {
-  const stubs: Question[] = [
-    {
-      id: '1',
-      question: `What is considered the founding event of ${topic}?`,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctIndex: 0,
-      explanation: 'This is the stub explanation for question 1.',
-    },
-    {
-      id: '2',
-      question: `Who is most associated with ${topic}?`,
-      options: ['Person A', 'Person B', 'Person C', 'Person D'],
-      correctIndex: 1,
-      explanation: 'This is the stub explanation for question 2.',
-    },
-    {
-      id: '3',
-      question: `What was the primary impact of ${topic}?`,
-      options: ['Impact A', 'Impact B', 'Impact C', 'Impact D'],
-      correctIndex: 2,
-      explanation: 'This is the stub explanation for question 3.',
-    },
-    {
-      id: '4',
-      question: `Which region is most connected to ${topic}?`,
-      options: ['Region A', 'Region B', 'Region C', 'Region D'],
-      correctIndex: 3,
-      explanation: 'This is the stub explanation for question 4.',
-    },
-    {
-      id: '5',
-      question: `What ended the era of ${topic}?`,
-      options: ['End A', 'End B', 'End C', 'End D'],
-      correctIndex: 0,
-      explanation: 'This is the stub explanation for question 5.',
-    },
-    {
-      id: '6',
-      question: `Which innovation is attributed to ${topic}?`,
-      options: ['Inno A', 'Inno B', 'Inno C', 'Inno D'],
-      correctIndex: 1,
-      explanation: 'This is the stub explanation for question 6.',
-    },
-    {
-      id: '7',
-      question: `What language was primarily used in ${topic}?`,
-      options: ['Lang A', 'Lang B', 'Lang C', 'Lang D'],
-      correctIndex: 2,
-      explanation: 'This is the stub explanation for question 7.',
-    },
-    {
-      id: '8',
-      question: `Which architectural style is associated with ${topic}?`,
-      options: ['Style A', 'Style B', 'Style C', 'Style D'],
-      correctIndex: 3,
-      explanation: 'This is the stub explanation for question 8.',
-    },
-    {
-      id: '9',
-      question: `What was the main form of government in ${topic}?`,
-      options: ['Gov A', 'Gov B', 'Gov C', 'Gov D'],
-      correctIndex: 0,
-      explanation: 'This is the stub explanation for question 9.',
-    },
-    {
-      id: '10',
-      question: `What legacy did ${topic} leave behind?`,
-      options: ['Legacy A', 'Legacy B', 'Legacy C', 'Legacy D'],
-      correctIndex: 1,
-      explanation: 'This is the stub explanation for question 10.',
-    },
-  ];
-  return stubs;
+function difficultyWording(difficulty: 'easy' | 'medium' | 'hard'): string {
+  switch (difficulty) {
+    case 'easy':
+      return 'straightforward and suitable for general audiences';
+    case 'medium':
+      return 'moderately challenging and suitable for people with some knowledge of the subject';
+    case 'hard':
+      return 'obscure, nuanced, and suitable only for experts or enthusiasts';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Prompt builders
+// ---------------------------------------------------------------------------
+
+const SYSTEM_PROMPT =
+  'You are a trivia question generator. ' +
+  'You MUST return ONLY a raw JSON object — absolutely no markdown code fences, no backticks, no prose, no commentary. ' +
+  'Your entire response must be valid JSON that can be passed directly to JSON.parse().';
+
+function buildUserPrompt(topic: string, difficulty: 'easy' | 'medium' | 'hard', count: number): string {
+  return (
+    `Generate ${count} trivia questions about "${topic}" at ${difficulty} difficulty ` +
+    `(${difficultyWording(difficulty)}). ` +
+    'Return a JSON object with this exact shape:\n' +
+    '{\n' +
+    '  "questions": [\n' +
+    '    {\n' +
+    '      "id": "1",\n' +
+    '      "question": "...",\n' +
+    '      "options": ["A", "B", "C", "D"],\n' +
+    '      "correctIndex": 0,\n' +
+    '      "explanation": "..."\n' +
+    '    }\n' +
+    '  ]\n' +
+    '}\n' +
+    'Rules:\n' +
+    '- options must be an array of exactly 4 non-empty strings\n' +
+    '- correctIndex must be an integer 0, 1, 2, or 3 pointing to the correct option\n' +
+    '- explanation must be a non-empty string explaining why the answer is correct\n' +
+    '- id must be a string ("1", "2", …)\n' +
+    `- Generate exactly ${count} questions`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Workers AI call
+// ---------------------------------------------------------------------------
+
+async function callWorkersAI(
+  env: Env,
+  model: string,
+  topic: string,
+  difficulty: 'easy' | 'medium' | 'hard',
+  count: number,
+): Promise<Question[]> {
+  let aiResponse: unknown;
+  try {
+    aiResponse = await env.AI.run(model as Parameters<Ai['run']>[0], {
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: buildUserPrompt(topic, difficulty, count) },
+      ],
+    });
+  } catch (e) {
+    throw new LLMError(`Workers AI runtime error: ${e instanceof Error ? e.message : String(e)}`, 502);
+  }
+
+  const content = (aiResponse as WorkersAIResponse)?.response;
+
+  if (!content || typeof content !== 'string') {
+    throw new LLMError('Empty or unexpected response from Workers AI', 502);
+  }
+
+  // Strip any accidental markdown fences the model may still emit
+  const cleaned = content
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim();
+
+  const parsed = JSON.parse(cleaned) as { questions: Question[] };
+  return parsed.questions;
+}
+
+// ---------------------------------------------------------------------------
+// Custom error type so handlers can tell LLM failures apart from others
+// ---------------------------------------------------------------------------
+
+class LLMError extends Error {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+  ) {
+    super(message);
+    this.name = 'LLMError';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +169,7 @@ function buildStubQuestions(topic: string, _difficulty: string): Question[] {
 // ---------------------------------------------------------------------------
 
 export default {
-  async fetch(request: Request, _env: Env, _ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // ── CORS preflight ──────────────────────────────────────────────────────
@@ -152,7 +179,7 @@ export default {
 
     // ── Route: POST /generate ───────────────────────────────────────────────
     if (url.pathname === '/generate' && request.method === 'POST') {
-      return handleGenerate(request);
+      return handleGenerate(request, env);
     }
 
     // ── 404 for everything else ─────────────────────────────────────────────
@@ -164,9 +191,9 @@ export default {
 // /generate handler
 // ---------------------------------------------------------------------------
 
-async function handleGenerate(request: Request): Promise<Response> {
+async function handleGenerate(request: Request, env: Env): Promise<Response> {
   try {
-    // Parse + validate request body
+    // ── Parse + validate request body ───────────────────────────────────────
     let body: GenerateRequest;
     try {
       body = (await request.json()) as GenerateRequest;
@@ -186,17 +213,30 @@ async function handleGenerate(request: Request): Promise<Response> {
         ? (difficulty.toLowerCase() as 'easy' | 'medium' | 'hard')
         : 'medium';
 
-    // Cap count at 15 server-side (enforced in WORKER-002 too)
+    // Cap count at 15 server-side
     const safeCount = Math.min(Math.max(1, Number(count) || 10), 15);
 
-    // TODO(WORKER-002): replace stub with real LLM call
-    const questions = buildStubQuestions(topic.trim(), normalizedDifficulty).slice(0, safeCount);
+    // ── Call Workers AI ─────────────────────────────────────────────────────
+    const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct';
+    const questions = await callWorkersAI(
+      env,
+      model,
+      topic.trim(),
+      normalizedDifficulty,
+      safeCount,
+    );
 
     const responseBody: GenerateResponse = { questions };
     return corsResponse(JSON.stringify(responseBody), 200);
   } catch (err) {
     // Never let an unhandled error escape as a naked 500
+    if (err instanceof LLMError) {
+      const retryable = err.statusCode >= 500;
+      const status = err.statusCode >= 500 ? 502 : err.statusCode;
+      return errorResponse(`LLM API error: ${err.message}`, retryable, status);
+    }
     const message = err instanceof Error ? err.message : 'Unexpected server error';
     return errorResponse(message, true, 500);
   }
 }
+
