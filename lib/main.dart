@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'app/router.dart';
 import 'models/elo_record.dart';
 
 Future<void> main() async {
@@ -15,20 +16,11 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        backgroundColor: Color(0xFF1A0A2E),
-        body: Center(
-          child: Text(
-            'Trivex',
-            style: TextStyle(
-              color: Color(0xFFF0EDF8),
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+    return MaterialApp(
+      title: 'Trivex',
+      debugShowCheckedModeBanner: false,
+      initialRoute: '/home',
+      onGenerateRoute: generateRoute,
     );
   }
 }
