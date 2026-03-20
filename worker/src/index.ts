@@ -1,6 +1,6 @@
 /**
  * Trivex Worker — Cloudflare Workers backend
- * POST /generate  → calls Workers AI and returns trivia questions (WORKER-002)
+ * POST /generate  → calls Workers AI, validates response, returns trivia questions (WORKER-003)
  */
 
 export interface Env {
@@ -165,6 +165,43 @@ class LLMError extends Error {
 }
 
 // ---------------------------------------------------------------------------
+// Validation type guard (WORKER-003)
+// ---------------------------------------------------------------------------
+
+function isValidQuestion(q: unknown): q is Question {
+  if (typeof q !== 'object' || q === null) return false;
+  const obj = q as Record<string, unknown>;
+  if (typeof obj['id'] !== 'string') return false;
+  if (typeof obj['question'] !== 'string' || obj['question'].trim() === '') return false;
+  if (
+    !Array.isArray(obj['options']) ||
+    obj['options'].length !== 4 ||
+    !(obj['options'] as unknown[]).every((o) => typeof o === 'string' && (o as string).trim() !== '')
+  )
+    return false;
+  if (
+    typeof obj['correctIndex'] !== 'number' ||
+    !Number.isInteger(obj['correctIndex']) ||
+    (obj['correctIndex'] as number) < 0 ||
+    (obj['correctIndex'] as number) > 3
+  )
+    return false;
+  if (typeof obj['explanation'] !== 'string' || obj['explanation'].trim() === '') return false;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// 5-second timeout helper (WORKER-003)
+// ---------------------------------------------------------------------------
+
+function withTimeout<T>(promise: Promise<T>, ms: number, timeoutError: Error): Promise<T> {
+  const timer = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(timeoutError), ms),
+  );
+  return Promise.race([promise, timer]);
+}
+
+// ---------------------------------------------------------------------------
 // Main fetch handler
 // ---------------------------------------------------------------------------
 
@@ -216,24 +253,29 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
     // Cap count at 15 server-side
     const safeCount = Math.min(Math.max(1, Number(count) || 10), 15);
 
-    // ── Call Workers AI ─────────────────────────────────────────────────────
+    // ── Call Workers AI with 5s timeout (WORKER-003) ───────────────────────
     const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct';
-    const questions = await callWorkersAI(
-      env,
-      model,
-      topic.trim(),
-      normalizedDifficulty,
-      safeCount,
+    const timeoutError = new LLMError('LLM API timeout', 504);
+    const questions = await withTimeout(
+      callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount),
+      5000,
+      timeoutError,
     );
+
+    // ── Validate response shape (WORKER-003) ────────────────────────────────
+    if (!Array.isArray(questions) || questions.length !== safeCount || !questions.every(isValidQuestion)) {
+      return errorResponse('Invalid question format from LLM', true, 422);
+    }
 
     const responseBody: GenerateResponse = { questions };
     return corsResponse(JSON.stringify(responseBody), 200);
   } catch (err) {
     // Never let an unhandled error escape as a naked 500
     if (err instanceof LLMError) {
-      const retryable = err.statusCode >= 500;
-      const status = err.statusCode >= 500 ? 502 : err.statusCode;
-      return errorResponse(`LLM API error: ${err.message}`, retryable, status);
+      if (err.statusCode === 504) {
+        return errorResponse('LLM API timeout', true, 504);
+      }
+      return errorResponse('LLM API unavailable', true, 502);
     }
     const message = err instanceof Error ? err.message : 'Unexpected server error';
     return errorResponse(message, true, 500);
