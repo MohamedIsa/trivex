@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 
 import 'package:trivex/models/elo_record.dart';
@@ -105,14 +106,20 @@ Future<ProviderContainer> _pumpRevealing(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
-        home: const GameScreen(),
-        onGenerateRoute: (settings) {
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) => Scaffold(body: Text('route: ${settings.name}')),
-          );
-        },
+      child: MaterialApp.router(
+        routerConfig: GoRouter(
+          initialLocation: '/game',
+          routes: [
+            GoRoute(
+              path: '/game',
+              builder: (_, _) => const GameScreen(),
+            ),
+            GoRoute(
+              path: '/result',
+              builder: (_, _) => const Scaffold(body: Text('route: /result')),
+            ),
+          ],
+        ),
       ),
     ),
   );

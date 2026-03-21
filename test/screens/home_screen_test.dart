@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
@@ -24,30 +25,31 @@ List<EloRecord> _fakeHistory({int count = 10, int base = 1050}) {
 
 /// Pumps [HomeScreen] inside a [ProviderScope] with the given overrides.
 ///
-/// A [NavigatorObserver] is injected to capture navigation events.
-Future<void> _pumpHomeScreen(
+/// Returns the [GoRouter] so callers can inspect navigation state.
+Future<GoRouter> _pumpHomeScreen(
   WidgetTester tester, {
   required List<Override> overrides,
-  NavigatorObserver? observer,
 }) async {
+  final router = GoRouter(
+    initialLocation: '/home',
+    routes: [
+      GoRoute(
+        path: '/home',
+        builder: (_, _) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/topic',
+        builder: (_, _) => const Scaffold(body: Text('route: /topic')),
+      ),
+    ],
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
-      child: MaterialApp(
-        home: const HomeScreen(),
-        navigatorObservers: [if (observer != null) observer],
-        onGenerateRoute: (settings) {
-          // Stub routes so Navigator.pushNamed doesn't crash.
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) => Scaffold(
-              body: Text('route: ${settings.name}'),
-            ),
-          );
-        },
-      ),
+      child: MaterialApp.router(routerConfig: router),
     ),
   );
+  return router;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,31 +105,18 @@ void main() {
     testWidgets(
       'tap Play button — navigates to /topic',
       (tester) async {
-        String? pushedRoute;
-
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
-            ],
-            child: MaterialApp(
-              home: const HomeScreen(),
-              onGenerateRoute: (settings) {
-                pushedRoute = settings.name;
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (_) => const Scaffold(),
-                );
-              },
-            ),
-          ),
+        await _pumpHomeScreen(
+          tester,
+          overrides: [
+            eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+          ],
         );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Play'));
         await tester.pumpAndSettle();
 
-        expect(pushedRoute, '/topic');
+        expect(find.text('route: /topic'), findsOneWidget);
       },
     );
 
@@ -138,6 +127,15 @@ void main() {
       (tester) async {
         // Override with a future that takes a long time, keeping state as
         // AsyncLoading. We'll flush entry timers manually so no leaks.
+        final router = GoRouter(
+          initialLocation: '/home',
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (_, _) => const HomeScreen(),
+            ),
+          ],
+        );
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -148,9 +146,7 @@ void main() {
                 ),
               ),
             ],
-            child: MaterialApp(
-              home: const HomeScreen(),
-            ),
+            child: MaterialApp.router(routerConfig: router),
           ),
         );
 

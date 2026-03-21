@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:trivex/models/game_config.dart';
 import 'package:trivex/screens/loading_screen.dart';
@@ -11,36 +12,41 @@ import 'package:trivex/screens/loading_screen.dart';
 
 const _config = GameConfig(topic: 'History', difficulty: 'medium');
 
-/// Pumps [LoadingScreen] inside a [MaterialApp] whose initial route carries
-/// [config] as arguments.
+/// Pumps [LoadingScreen] inside a [MaterialApp.router] with [GoRouter].
+///
+/// The screen receives [config] via its constructor parameter (mirroring
+/// the real [GoRoute] builder that casts `state.extra`).
 ///
 /// After this returns the widget tree is rendered **but** the post-frame
 /// callback that triggers `_fetchQuestions` has **not yet fired**.
 /// Call `tester.pump()` once more to let the callback execute.
-Future<void> _pumpLoadingScreen(
+Future<GoRouter> _pumpLoadingScreen(
   WidgetTester tester, {
-  GameConfig config = _config,
-  void Function(RouteSettings)? onRoute,
+  GameConfig? config = _config,
+  void Function(String)? onRoute,
 }) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      child: MaterialApp(
-        onGenerateRoute: (settings) {
-          if (settings.name == '/') {
-            return MaterialPageRoute(
-              settings: RouteSettings(name: '/loading', arguments: config),
-              builder: (_) => const LoadingScreen(),
-            );
-          }
-          onRoute?.call(settings);
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) => Scaffold(body: Text('route: ${settings.name}')),
-          );
+  final router = GoRouter(
+    initialLocation: '/loading',
+    routes: [
+      GoRoute(
+        path: '/loading',
+        builder: (_, _) => LoadingScreen(gameConfig: config),
+      ),
+      GoRoute(
+        path: '/game',
+        builder: (_, _) {
+          onRoute?.call('/game');
+          return const Scaffold(body: Text('route: /game'));
         },
       ),
+    ],
+  );
+  await tester.pumpWidget(
+    ProviderScope(
+      child: MaterialApp.router(routerConfig: router),
     ),
   );
+  return router;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,39 +80,32 @@ void main() {
       'tap Cancel — pops to previous route',
       (tester) async {
         // Build a two-page stack so there's something to pop to.
+        final router = GoRouter(
+          initialLocation: '/topic',
+          routes: [
+            GoRoute(
+              path: '/topic',
+              builder: (_, _) => const Scaffold(body: Text('Topic')),
+            ),
+            GoRoute(
+              path: '/loading',
+              builder: (_, _) => const LoadingScreen(gameConfig: _config),
+            ),
+            GoRoute(
+              path: '/game',
+              builder: (_, _) => const Scaffold(),
+            ),
+          ],
+        );
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              initialRoute: '/topic',
-              onGenerateRoute: (settings) {
-                if (settings.name == '/topic') {
-                  return MaterialPageRoute(
-                    settings: settings,
-                    builder: (_) => const Scaffold(body: Text('Topic')),
-                  );
-                }
-                if (settings.name == '/loading') {
-                  return MaterialPageRoute(
-                    settings: RouteSettings(
-                      name: '/loading',
-                      arguments: _config,
-                    ),
-                    builder: (_) => const LoadingScreen(),
-                  );
-                }
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (_) => const Scaffold(),
-                );
-              },
-            ),
+            child: MaterialApp.router(routerConfig: router),
           ),
         );
         await tester.pumpAndSettle();
 
         // Push /loading on top.
-        final nav = tester.state<NavigatorState>(find.byType(Navigator));
-        nav.pushNamed('/loading');
+        router.push('/loading');
         // Let the push animation + post-frame callback fire.
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
@@ -145,23 +144,19 @@ void main() {
     testWidgets(
       'missing GameConfig — shows "Missing game configuration." error',
       (tester) async {
-        // Push LoadingScreen without GameConfig arguments.
+        // Push LoadingScreen without GameConfig.
+        final router = GoRouter(
+          initialLocation: '/loading',
+          routes: [
+            GoRoute(
+              path: '/loading',
+              builder: (_, _) => const LoadingScreen(),
+            ),
+          ],
+        );
         await tester.pumpWidget(
           ProviderScope(
-            child: MaterialApp(
-              onGenerateRoute: (settings) {
-                if (settings.name == '/') {
-                  return MaterialPageRoute(
-                    settings: const RouteSettings(name: '/loading'),
-                    builder: (_) => const LoadingScreen(),
-                  );
-                }
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (_) => const Scaffold(),
-                );
-              },
-            ),
+            child: MaterialApp.router(routerConfig: router),
           ),
         );
 

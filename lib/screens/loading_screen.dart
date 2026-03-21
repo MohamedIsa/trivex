@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 
 import '../constants/animation_constants.dart';
@@ -12,7 +13,10 @@ import '../theme/app_shadows.dart';
 
 /// Loading screen — pulsing wordmark, question fetch, error retry (UI-003).
 class LoadingScreen extends ConsumerStatefulWidget {
-  const LoadingScreen({super.key});
+  const LoadingScreen({super.key, this.gameConfig});
+
+  /// Game configuration passed via [GoRouter] typed extras.
+  final GameConfig? gameConfig;
 
   @override
   ConsumerState<LoadingScreen> createState() => _LoadingScreenState();
@@ -62,8 +66,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
       if (mounted) setState(() => _entryOpacity = 1);
     });
 
-    // Deferred so ModalRoute.of(context) is available (depends on inherited
-    // widget which is not accessible during initState).
+    // Deferred so the widget is fully mounted before starting the fetch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _fetchQuestions();
     });
@@ -112,7 +115,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
           );
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/game', arguments: questions);
+      context.pushReplacement('/game');
     } catch (e) {
       if (_cancelled || !mounted) return;
       _pulseCtrl.stop();
@@ -123,15 +126,11 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
     }
   }
 
-  GameConfig? get _gameConfig {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is GameConfig) return args;
-    return null;
-  }
+  GameConfig? get _gameConfig => widget.gameConfig;
 
   void _cancel() {
     _cancelled = true;
-    Navigator.pop(context);
+    context.pop();
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

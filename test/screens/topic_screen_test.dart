@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:trivex/models/game_config.dart';
 import 'package:trivex/screens/topic_screen.dart';
@@ -9,26 +10,37 @@ import 'package:trivex/theme/app_colors.dart';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Pumps [TopicScreen] inside a [MaterialApp] with a [NavigatorObserver].
-Future<void> _pumpTopicScreen(
+/// Pumps [TopicScreen] inside a [MaterialApp.router] with [GoRouter].
+///
+/// [onPush] is called when a route other than /topic is built, allowing
+/// tests to capture the [GoRouterState] (and its extras).
+Future<GoRouter> _pumpTopicScreen(
   WidgetTester tester, {
-  NavigatorObserver? observer,
-  void Function(RouteSettings)? onPush,
+  void Function(GoRouterState)? onPush,
 }) async {
-  await tester.pumpWidget(
-    MaterialApp(
-      home: const TopicScreen(),
-      navigatorObservers: [if (observer != null) observer],
-      onGenerateRoute: (settings) {
-        onPush?.call(settings);
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) => Scaffold(body: Text('route: ${settings.name}')),
-        );
-      },
-    ),
+  final router = GoRouter(
+    initialLocation: '/topic',
+    routes: [
+      GoRoute(
+        path: '/home',
+        builder: (_, _) => const Scaffold(body: Text('Home')),
+      ),
+      GoRoute(
+        path: '/topic',
+        builder: (_, _) => const TopicScreen(),
+      ),
+      GoRoute(
+        path: '/loading',
+        builder: (_, state) {
+          onPush?.call(state);
+          return Scaffold(body: Text('route: ${state.uri}'));
+        },
+      ),
+    ],
   );
+  await tester.pumpWidget(MaterialApp.router(routerConfig: router));
   await tester.pumpAndSettle();
+  return router;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,11 +119,11 @@ void main() {
     testWidgets(
       'tap Start with valid topic — navigates to /loading with GameConfig',
       (tester) async {
-        RouteSettings? pushedSettings;
+        GoRouterState? pushedState;
 
         await _pumpTopicScreen(
           tester,
-          onPush: (settings) => pushedSettings = settings,
+          onPush: (state) => pushedState = state,
         );
 
         await tester.enterText(find.byType(TextField), 'Science');
@@ -120,8 +132,8 @@ void main() {
         await tester.tap(find.text('Start'));
         await tester.pumpAndSettle();
 
-        expect(pushedSettings?.name, '/loading');
-        final config = pushedSettings?.arguments as GameConfig;
+        expect(pushedState, isNotNull);
+        final config = pushedState!.extra as GameConfig;
         expect(config.topic, 'Science');
         expect(config.difficulty, 'medium'); // default
       },
@@ -132,29 +144,24 @@ void main() {
     testWidgets(
       'tap back arrow — pops to previous route',
       (tester) async {
-        // Push a base route first, then TopicScreen on top.
-        await tester.pumpWidget(
-          MaterialApp(
-            initialRoute: '/home',
-            onGenerateRoute: (settings) {
-              if (settings.name == '/home') {
-                return MaterialPageRoute(
-                  settings: settings,
-                  builder: (_) => const Scaffold(body: Text('Home')),
-                );
-              }
-              return MaterialPageRoute(
-                settings: settings,
-                builder: (_) => const TopicScreen(),
-              );
-            },
-          ),
+        final router = GoRouter(
+          initialLocation: '/home',
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (_, _) => const Scaffold(body: Text('Home')),
+            ),
+            GoRoute(
+              path: '/topic',
+              builder: (_, _) => const TopicScreen(),
+            ),
+          ],
         );
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
         await tester.pumpAndSettle();
 
-        // Navigate to /topic.
-        final nav = tester.state<NavigatorState>(find.byType(Navigator));
-        nav.pushNamed('/topic');
+        // Push /topic on top of /home.
+        router.push('/topic');
         await tester.pumpAndSettle();
 
         // Tap the back arrow.

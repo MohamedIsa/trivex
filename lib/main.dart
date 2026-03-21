@@ -17,11 +17,10 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Trivex',
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
-      onGenerateRoute: generateRoute,
+      routerConfig: goRouter,
     );
   }
 }

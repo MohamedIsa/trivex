@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
@@ -80,7 +81,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
     final newState = ref.read(gameStateProvider);
 
     if (newState.isGameOver) {
-      Navigator.pushReplacementNamed(context, '/result');
+      context.pushReplacement('/result');
     } else {
       // Slide sheet down, then restart timer for the next question.
       _slideController.reverse().then((_) {
@@ -109,7 +110,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
     // Don't render anything when fully hidden and not animating.
     return AnimatedBuilder(
       animation: _slideController,
-      builder: (_, __) {
+      builder: (_, _) {
         if (_slideController.value == 0) return const SizedBox.shrink();
 
         return Stack(

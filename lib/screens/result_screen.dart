@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/game_config.dart';
 import '../constants/animation_constants.dart';
@@ -98,27 +99,22 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
     if (_navigating) return;
     _navigating = true;
     final state = ref.read(gameStateProvider);
-    Navigator.pushReplacementNamed(
-      context,
+    context.pushReplacement(
       '/loading',
-      arguments: GameConfig(topic: state.topic, difficulty: state.difficulty),
+      extra: GameConfig(topic: state.topic, difficulty: state.difficulty),
     );
   }
 
   void _newTopic() {
     if (_navigating) return;
     _navigating = true;
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/topic',
-      (r) => r.settings.name == '/home',
-    );
+    context.go('/topic');
   }
 
   void _goHome() {
     if (_navigating) return;
     _navigating = true;
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
+    context.go('/home');
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────

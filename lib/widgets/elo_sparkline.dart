@@ -21,7 +21,7 @@ class EloSparkline extends ConsumerWidget {
 
     return historyAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
       data: (history) {
         if (history.length < 2) {
           return const Center(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
@@ -95,7 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
           ),
-          error: (_, __) => const Center(
+          error: (_, _) => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
           ),
           data: (history) =>
@@ -194,7 +195,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: SlideTransition(
               position: _buttonSlide,
               child: GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/topic'),
+                onTap: () => context.push('/topic'),
                 child: Container(
                   width: double.infinity,
                   constraints: const BoxConstraints(minHeight: kMinTapTarget),

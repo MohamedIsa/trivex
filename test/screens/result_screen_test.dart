@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/models/game_state.dart';
@@ -97,7 +98,7 @@ GameState _loseState() {
 Future<ProviderContainer> _pumpResultScreen(
   WidgetTester tester, {
   required GameState state,
-  void Function(RouteSettings)? onRoute,
+  void Function(String routeName)? onRoute,
 }) async {
   tester.view.physicalSize = const Size(1080, 1920);
   tester.view.devicePixelRatio = 1.0;
@@ -121,19 +122,41 @@ Future<ProviderContainer> _pumpResultScreen(
   );
   addTearDown(container.dispose);
 
+  final router = GoRouter(
+    initialLocation: '/result',
+    routes: [
+      GoRoute(
+        path: '/result',
+        builder: (_, _) => const ResultScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (_, _) {
+          onRoute?.call('/home');
+          return const Scaffold(body: Text('route: /home'));
+        },
+      ),
+      GoRoute(
+        path: '/topic',
+        builder: (_, _) {
+          onRoute?.call('/topic');
+          return const Scaffold(body: Text('route: /topic'));
+        },
+      ),
+      GoRoute(
+        path: '/loading',
+        builder: (_, _) {
+          onRoute?.call('/loading');
+          return const Scaffold(body: Text('route: /loading'));
+        },
+      ),
+    ],
+  );
+
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp(
-        home: const ResultScreen(),
-        onGenerateRoute: (settings) {
-          onRoute?.call(settings);
-          return MaterialPageRoute(
-            settings: settings,
-            builder: (_) => Scaffold(body: Text('route: ${settings.name}')),
-          );
-        },
-      ),
+      child: MaterialApp.router(routerConfig: router),
     ),
   );
 
@@ -197,7 +220,7 @@ void main() {
         await _pumpResultScreen(
           tester,
           state: _winState(),
-          onRoute: (s) => pushedRoute = s.name,
+          onRoute: (name) => pushedRoute = name,
         );
 
         await tester.tap(find.text('Play Again'));
@@ -218,7 +241,7 @@ void main() {
         await _pumpResultScreen(
           tester,
           state: _winState(),
-          onRoute: (s) => pushedRoute = s.name,
+          onRoute: (name) => pushedRoute = name,
         );
 
         await tester.tap(find.text('New Topic'));
@@ -239,7 +262,7 @@ void main() {
         await _pumpResultScreen(
           tester,
           state: _winState(),
-          onRoute: (s) => pushedRoute = s.name,
+          onRoute: (name) => pushedRoute = name,
         );
 
         await tester.tap(find.text('Home'));

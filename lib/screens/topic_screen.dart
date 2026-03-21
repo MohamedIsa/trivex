@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
@@ -53,10 +54,9 @@ class _TopicScreenState extends State<TopicScreen>
 
   void _start() {
     if (!_canStart) return;
-    Navigator.pushNamed(
-      context,
+    context.push(
       '/loading',
-      arguments: GameConfig(
+      extra: GameConfig(
         topic: _topicCtrl.text.trim(),
         difficulty: _difficulty,
       ),
@@ -92,7 +92,7 @@ class _TopicScreenState extends State<TopicScreen>
                         Icons.arrow_back,
                         color: AppColors.foreground,
                       ),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => context.pop(),
                     ),
                   ),
 

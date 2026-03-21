@@ -125,7 +125,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                               child: ListView.separated(
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: state.currentQuestion.options.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const SizedBox(height: 12),
                                 itemBuilder: (_, index) {
                                   return _AnswerTile(
@@ -253,7 +253,7 @@ class _TimerBar extends StatelessWidget {
     return RepaintBoundary(
       child: AnimatedBuilder(
         animation: controller,
-        builder: (_, __) {
+        builder: (_, _) {
           final remaining = 1.0 - controller.value;
           return SizedBox(
             height: kTimerBarHeight,
