@@ -24,6 +24,21 @@ Question _q(int i) => Question(
       explanation: 'Because $i.',
     );
 
+/// Question with very long answer options (~80 chars each).
+Question _longOptionQ() => Question(
+      id: 'qLong',
+      question:
+          'This is a deliberately verbose question that the AI might produce to test wrapping behaviour',
+      options: [
+        'A' * 80,
+        'B' * 80,
+        'C' * 80,
+        'D' * 80,
+      ],
+      correctIndex: 0,
+      explanation: 'Long option test.',
+    );
+
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
 GameState _initialGameState() => GameState(
@@ -206,6 +221,42 @@ void main() {
 
         // The score text should update.
         expect(find.text('You ${state.playerScore}'), findsOneWidget);
+      },
+    );
+
+    // ── Long answer text — no overflow ──────────────────────────────────
+
+    testWidgets(
+      'long answer options (80 chars each) — all 4 tiles render, no overflow',
+      (tester) async {
+        final longQuestions =
+            List.generate(10, (i) => i == 0 ? _longOptionQ() : _q(i + 1));
+        final longState = GameState(
+          questions: longQuestions,
+          topic: 'Test',
+          difficulty: 'medium',
+          currentIndex: 0,
+          playerScore: 0,
+          botScore: 0,
+          selectedIndex: null,
+          isRevealing: false,
+          isGameOver: false,
+        );
+
+        await _pumpWithState(tester, longState);
+        await tester.pump();
+
+        // All 4 badge labels must render (proves all tiles are in the tree).
+        expect(find.text('A'), findsOneWidget);
+        expect(find.text('B'), findsOneWidget);
+        expect(find.text('C'), findsOneWidget);
+        expect(find.text('D'), findsOneWidget);
+
+        // All 4 long option texts must be present (no clipping / omission).
+        expect(find.text('A' * 80), findsOneWidget);
+        expect(find.text('B' * 80), findsOneWidget);
+        expect(find.text('C' * 80), findsOneWidget);
+        expect(find.text('D' * 80), findsOneWidget);
       },
     );
   });

@@ -71,9 +71,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   GameTimer(timerController: _timerController),
                   _TimerBar(timerController: _timerController),
 
-                  // ── Question + Tiles ─────────────────────────────────────
+                  // ── Question + Tiles (scrollable) ─────────────────────────
                   Expanded(
-                    child: Padding(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(
                         horizontal: kScreenPaddingH,
                         vertical: kScreenPaddingH,
@@ -82,65 +82,22 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Question text — slides in on each new question.
-                          AnimatedSwitcher(
-                            duration: kRevealSlide,
-                            transitionBuilder: (child, animation) {
-                              final offsetAnimation = Tween<Offset>(
-                                begin: const Offset(0.05, 0),
-                                end: Offset.zero,
-                              ).animate(animation);
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: offsetAnimation,
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: AnimatedOpacity(
-                              key: ValueKey(state.currentIndex),
-                              opacity: state.isRevealing ? 0.5 : 1.0,
-                              duration: kButtonTransition,
-                              child: Text(
-                                state.currentQuestion.question,
-                                style: const TextStyle(
-                                  color: AppColors.foreground,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  height: 1.25,
-                                ),
-                              ),
-                            ),
-                          ),
+                          _QuestionText(state: state),
 
                           const SizedBox(height: 32),
 
                           // Answer tiles
-                          Expanded(
-                            child: IgnorePointer(
-                              ignoring: state.isRevealing,
-                              child: ListView.separated(
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: state.currentQuestion.options.length,
-                                separatorBuilder: (_, _) =>
-                                    const SizedBox(height: 12),
-                                itemBuilder: (_, index) {
-                                  return _AnswerTile(
-                                    index: index,
-                                    state: state,
-                                    isPressed: _pressedIndex == index,
-                                    onTapDown: () =>
-                                        setState(() => _pressedIndex = index),
-                                    onTapUp: () {
-                                      setState(() => _pressedIndex = null);
-                                      _onTileTap(index, state);
-                                    },
-                                    onTapCancel: () =>
-                                        setState(() => _pressedIndex = null),
-                                  );
-                                },
-                              ),
-                            ),
+                          _AnswerTileList(
+                            state: state,
+                            pressedIndex: _pressedIndex,
+                            onTapDown: (i) =>
+                                setState(() => _pressedIndex = i),
+                            onTapUp: (i) {
+                              setState(() => _pressedIndex = null);
+                              _onTileTap(i, state);
+                            },
+                            onTapCancel: () =>
+                                setState(() => _pressedIndex = null),
                           ),
                         ],
                       ),
@@ -271,6 +228,89 @@ class _TimerBar extends StatelessWidget {
   }
 }
 
+// ── Question text ───────────────────────────────────────────────────────────
+
+class _QuestionText extends StatelessWidget {
+  const _QuestionText({required this.state});
+
+  final GameState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: kRevealSlide,
+      transitionBuilder: (child, animation) {
+        final offsetAnimation = Tween<Offset>(
+          begin: const Offset(0.05, 0),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          ),
+        );
+      },
+      child: AnimatedOpacity(
+        key: ValueKey(state.currentIndex),
+        opacity: state.isRevealing ? 0.5 : 1.0,
+        duration: kButtonTransition,
+        child: Text(
+          state.currentQuestion.question,
+          softWrap: true,
+          style: const TextStyle(
+            color: AppColors.foreground,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            height: 1.25,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Answer tile list ────────────────────────────────────────────────────────
+
+class _AnswerTileList extends StatelessWidget {
+  const _AnswerTileList({
+    required this.state,
+    required this.pressedIndex,
+    required this.onTapDown,
+    required this.onTapUp,
+    required this.onTapCancel,
+  });
+
+  final GameState state;
+  final int? pressedIndex;
+  final ValueChanged<int> onTapDown;
+  final ValueChanged<int> onTapUp;
+  final VoidCallback onTapCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      ignoring: state.isRevealing,
+      child: Column(
+        children: [
+          for (int i = 0; i < state.currentQuestion.options.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            _AnswerTile(
+              index: i,
+              state: state,
+              isPressed: pressedIndex == i,
+              onTapDown: () => onTapDown(i),
+              onTapUp: () => onTapUp(i),
+              onTapCancel: onTapCancel,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 // ── Answer tile ─────────────────────────────────────────────────────────────
 
 class _AnswerTile extends StatelessWidget {
@@ -373,6 +413,7 @@ class _AnswerTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   state.currentQuestion.options[index],
+                  softWrap: true,
                   style: TextStyle(color: textColor, fontSize: 16),
                 ),
               ),
