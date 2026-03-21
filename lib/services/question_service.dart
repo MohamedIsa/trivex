@@ -40,7 +40,7 @@ class QuestionService {
             headers: {'Content-Type': 'application/json'},
             body: body,
           )
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 20));
     } on TimeoutException {
       rethrow;
     }

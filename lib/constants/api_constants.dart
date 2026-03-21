@@ -1,2 +1,2 @@
 /// API constants — swap [kWorkerBaseUrl] to point at dev or prod.
-const String kWorkerBaseUrl = 'https://trivex-worker.your-subdomain.workers.dev';
+const String kWorkerBaseUrl = 'https://trivex-worker.trivex.workers.dev';

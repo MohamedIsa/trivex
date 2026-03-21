@@ -129,6 +129,7 @@ async function callWorkersAI(
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: buildUserPrompt(topic, difficulty, count) },
       ],
+      max_tokens: 4096,
     });
   } catch (e) {
     throw new LLMError(`Workers AI runtime error: ${e instanceof Error ? e.message : String(e)}`, 502);
@@ -253,12 +254,12 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
     // Cap count at 15 server-side
     const safeCount = Math.min(Math.max(1, Number(count) || 10), 15);
 
-    // ── Call Workers AI with 5s timeout (WORKER-003) ───────────────────────
+    // ── Call Workers AI with 15s timeout ─────────────────────────────────
     const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct';
     const timeoutError = new LLMError('LLM API timeout', 504);
     const questions = await withTimeout(
       callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount),
-      5000,
+      15000,
       timeoutError,
     );
 
