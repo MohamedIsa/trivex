@@ -284,5 +284,104 @@ void main() {
         expect(find.text('Correct!'), findsOneWidget);
       },
     );
+
+    // ── BUG-009: first-frame heading tests ────────────────────────────────
+
+    testWidgets(
+      'correct answer — "Correct!" on first visible frame, no flash',
+      (tester) async {
+        final container = await _pumpActiveGame(tester);
+
+        // Tap correct answer (index 0 = correctIndex).
+        await tester.tap(find.text('Alpha'));
+        await tester.pump(); // process tap → selectAnswer → state change
+        await tester.pump(const Duration(milliseconds: 50)); // first visible frame
+
+        expect(find.text('Correct!'), findsOneWidget);
+        expect(find.text('Wrong!'), findsNothing);
+        expect(find.text("Time's Up!"), findsNothing);
+
+        addTearDown(container.dispose);
+      },
+    );
+
+    testWidgets(
+      'wrong answer — "Wrong!" on first visible frame, no flash',
+      (tester) async {
+        final container = await _pumpActiveGame(tester);
+
+        // Tap wrong answer (index 1, correctIndex is 0).
+        await tester.tap(find.text('Bravo'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('Wrong!'), findsOneWidget);
+        expect(find.text('Correct!'), findsNothing);
+        expect(find.text("Time's Up!"), findsNothing);
+
+        addTearDown(container.dispose);
+      },
+    );
+
+    testWidgets(
+      'timeout — "Time\'s Up!" on first visible frame, no flash',
+      (tester) async {
+        final container = await _pumpActiveGame(tester);
+
+        // Trigger timeout via notifier.
+        container.read(gameStateNotifierProvider.notifier).timeExpired();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text("Time's Up!"), findsOneWidget);
+        expect(find.text('Correct!'), findsNothing);
+        expect(find.text('Wrong!'), findsNothing);
+
+        addTearDown(container.dispose);
+      },
+    );
   });
+}
+
+// ---------------------------------------------------------------------------
+// _pumpActiveGame — pumps GameScreen with a fresh non-revealing game state
+// ---------------------------------------------------------------------------
+
+/// Pumps [GameScreen] with a freshly initialised game (no answer selected,
+/// not revealing). Returns the [ProviderContainer] for direct notifier access.
+Future<ProviderContainer> _pumpActiveGame(WidgetTester tester) async {
+  final container = ProviderContainer(
+    overrides: [
+      gameStateNotifierProvider.overrideWith(GameStateNotifier.new),
+    ],
+  );
+
+  container
+      .read(gameStateNotifierProvider.notifier)
+      .initGame(_tenQuestions(), topic: 'Test', difficulty: 'medium');
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        routerConfig: GoRouter(
+          initialLocation: '/game',
+          routes: [
+            GoRoute(
+              path: '/game',
+              builder: (_, _) => const GameScreen(),
+            ),
+            GoRoute(
+              path: '/result',
+              builder: (_, _) =>
+                  const Scaffold(body: Text('route: /result')),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+
+  return container;
 }

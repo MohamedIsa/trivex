@@ -74,12 +74,11 @@ class RevealBottomSheet extends HookConsumerWidget {
 
     // ── Build ───────────────────────────────────────────────────────────────
 
-    final state = ref.watch(gameStateNotifierProvider);
-
     // Drive slide in/out reactively via ref.listen (not a side effect in build).
+    // _SheetPanel watches the provider directly (ConsumerWidget) so
+    // state is always fresh — we no longer capture it here.
     ref.listen<GameState>(gameStateNotifierProvider, (previous, next) {
-      if (next.isRevealing &&
-          slideController.status == AnimationStatus.dismissed) {
+      if (next.isRevealing && !(previous?.isRevealing ?? false)) {
         slideController.forward();
       } else if (!next.isRevealing &&
           slideController.status == AnimationStatus.completed) {
@@ -116,7 +115,6 @@ class RevealBottomSheet extends HookConsumerWidget {
                 child: SlideTransition(
                   position: offsetAnimation,
                   child: _SheetPanel(
-                    state: state,
                     isNextPressed: nextPressed.value,
                     onNextTapDown: () => nextPressed.value = true,
                     onNextTapUp: () {
@@ -139,36 +137,33 @@ class RevealBottomSheet extends HookConsumerWidget {
 // Sub-widgets (private)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _SheetPanel extends StatelessWidget {
+class _SheetPanel extends ConsumerWidget {
   const _SheetPanel({
-    required this.state,
     required this.isNextPressed,
     required this.onNextTapDown,
     required this.onNextTapUp,
     required this.onNextTapCancel,
   });
 
-  final GameState state;
   final bool isNextPressed;
   final VoidCallback onNextTapDown;
   final VoidCallback onNextTapUp;
   final VoidCallback onNextTapCancel;
 
-  bool get _isCorrect =>
-      state.selectedIndex != null &&
-      state.selectedIndex == state.currentQuestion.correctIndex;
-
-  bool get _isTimeout => state.selectedIndex == null;
-
-  Color get _accentColor => _isCorrect ? AppColors.teal : AppColors.red;
-
-  String get _heading {
-    if (_isTimeout) return "Time's Up!";
-    return _isCorrect ? 'Correct!' : 'Wrong!';
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(gameStateNotifierProvider);
+
+    final isCorrect = state.selectedIndex != null &&
+        state.selectedIndex == state.currentQuestion.correctIndex;
+    final isTimeout = state.selectedIndex == null;
+    final accentColor = isCorrect ? AppColors.teal : AppColors.red;
+    final heading = isTimeout
+        ? "Time's Up!"
+        : isCorrect
+            ? 'Correct!'
+            : 'Wrong!';
+
     final correctIdx = state.currentQuestion.correctIndex;
     final correctLetter = String.fromCharCode(65 + correctIdx);
     final isLastQuestion = state.currentIndex >= state.questions.length - 1;
@@ -193,11 +188,11 @@ class _SheetPanel extends StatelessWidget {
             width: kResultIconSize,
             height: kResultIconSize,
             decoration: BoxDecoration(
-              color: _accentColor,
+              color: accentColor,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              _isCorrect ? Icons.check : Icons.close,
+              isCorrect ? Icons.check : Icons.close,
               color: Colors.white,
               size: kIconSize,
             ),
@@ -207,9 +202,9 @@ class _SheetPanel extends StatelessWidget {
 
           // ── Heading ──────────────────────────────────────────────────────
           Text(
-            _heading,
+            heading,
             style: TextStyle(
-              color: _accentColor,
+              color: accentColor,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
