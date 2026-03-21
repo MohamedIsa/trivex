@@ -238,5 +238,51 @@ void main() {
         expect(find.text('Next →'), findsNothing);
       },
     );
+
+    // ── Wrong → correct transition — no "Wrong!" flash ───────────────────
+
+    testWidgets(
+      'wrong answer then correct answer — no "Wrong!" flash on second reveal',
+      (tester) async {
+        // Start with Q1 wrong reveal already showing.
+        await _pumpRevealing(
+          tester,
+          desiredState: _wrongRevealState(currentIndex: 0),
+        );
+
+        // Confirm "Wrong!" is visible for Q1.
+        expect(find.text('Wrong!'), findsOneWidget);
+
+        // Tap "Next →" to advance to Q2.
+        await tester.tap(find.text('Next →'));
+
+        // Pump frame-by-frame for the slide-out animation.
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+
+        // Sheet should be hidden; "Wrong!" gone.
+        expect(find.text('Wrong!'), findsNothing);
+
+        // Now answer Q2 correctly (tap 'Alpha' → index 0 = correctIndex).
+        await tester.tap(find.text('Alpha'));
+
+        // Step frame-by-frame through the slide-in animation.
+        // At NO intermediate frame should "Wrong!" appear.
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 20));
+
+          // "Wrong!" must never appear during Q2's reveal.
+          expect(
+            find.text('Wrong!'),
+            findsNothing,
+            reason: 'frame $i: "Wrong!" must not flash during Q2 reveal',
+          );
+        }
+
+        // Confirm "Correct!" is now visible.
+        expect(find.text('Correct!'), findsOneWidget);
+      },
+    );
   });
 }

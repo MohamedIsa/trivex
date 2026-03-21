@@ -209,6 +209,29 @@ void main() {
 
       expect(notifier.state.isGameOver, isFalse);
     });
+
+    test(
+      'nextQuestion emits exactly one state with selectedIndex null and isRevealing false',
+      () {
+        final notifier = _notifier();
+        notifier.initGame(_tenQuestions(), difficulty: 'medium');
+        notifier.selectAnswer(0, timeLeft: 5);
+
+        // Collect every state emitted during nextQuestion().
+        final emissions = <GameState>[];
+        _container!.listen(
+          gameStateNotifierProvider,
+          (_, next) => emissions.add(next),
+          fireImmediately: false,
+        );
+
+        notifier.nextQuestion();
+
+        expect(emissions, hasLength(1), reason: 'exactly one state emission');
+        expect(emissions.first.selectedIndex, isNull);
+        expect(emissions.first.isRevealing, isFalse);
+      },
+    );
   });
 
   // ── timeExpired ───────────────────────────────────────────────────────────
