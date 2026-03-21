@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../models/game_config.dart';
 import '../constants/animation_constants.dart';
@@ -12,130 +13,120 @@ import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
 /// Result screen — round summary, ELO delta, action buttons (UI-006).
-class ResultScreen extends ConsumerStatefulWidget {
+class ResultScreen extends HookConsumerWidget {
   const ResultScreen({super.key});
 
   @override
-  ConsumerState<ResultScreen> createState() => _ResultScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ── Staggered entry animation controllers ───────────────────────────────
 
-class _ResultScreenState extends ConsumerState<ResultScreen>
-    with TickerProviderStateMixin {
-  // ── Staggered entry animation controllers ─────────────────────────────────
-
-  late final List<AnimationController> _entryControllers;
-  late final List<Animation<double>> _fadeAnimations;
-  late final List<Animation<Offset>> _slideAnimations;
-
-  /// Cached before save so the "previous" value is accurate.
-  int _previousElo = 1000;
-  bool _saved = false;
-  bool _navigating = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 6 sections with 100 ms stagger (100 ms – 600 ms).
-    _entryControllers = List.generate(6, (i) {
-      return AnimationController(vsync: this, duration: kEntryDuration);
-    });
-
-    _fadeAnimations = _entryControllers
-        .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
-        .map((c) => Tween<double>(begin: 0, end: 1).animate(c))
-        .toList();
-
-    _slideAnimations = _entryControllers
-        .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
-        .map(
-          (c) => Tween<Offset>(
-            begin: const Offset(0, 0.08),
-            end: Offset.zero,
-          ).animate(c),
-        )
-        .toList();
-
-    // Fire staggered.
-    for (var i = 0; i < _entryControllers.length; i++) {
-      Future.delayed(kEntryStagger * (i + 1), () {
-        if (mounted) _entryControllers[i].forward();
-      });
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _persistElo();
-  }
-
-  Future<void> _persistElo() async {
-    if (_saved) return;
-    _saved = true;
-
-    final eloRepo = ref.read(eloRepositoryProvider);
-    _previousElo = eloRepo.getCurrentRating();
-
-    final state = ref.read(gameStateProvider);
-    final eloResult = state.eloResult;
-    if (eloResult != null) {
-      await eloRepo.saveResult(eloResult);
-      ref.invalidate(eloHistoryProvider);
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _entryControllers) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  // ── Navigation helpers ────────────────────────────────────────────────────
-
-  void _playAgain() {
-    if (_navigating) return;
-    _navigating = true;
-    final state = ref.read(gameStateProvider);
-    context.pushReplacement(
-      '/loading',
-      extra: GameConfig(topic: state.topic, difficulty: state.difficulty),
+    final entryControllers = List.generate(
+      6,
+      (i) => useAnimationController(duration: kEntryDuration),
     );
-  }
 
-  void _newTopic() {
-    if (_navigating) return;
-    _navigating = true;
-    context.go('/topic');
-  }
+    final fadeAnimations = useMemoized(
+      () => entryControllers
+          .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
+          .map((c) => Tween<double>(begin: 0, end: 1).animate(c))
+          .toList(),
+      entryControllers,
+    );
 
-  void _goHome() {
-    if (_navigating) return;
-    _navigating = true;
-    context.go('/home');
-  }
+    final slideAnimations = useMemoized(
+      () => entryControllers
+          .map((c) => CurvedAnimation(parent: c, curve: kEntryCurve))
+          .map(
+            (c) => Tween<Offset>(
+              begin: const Offset(0, 0.08),
+              end: Offset.zero,
+            ).animate(c),
+          )
+          .toList(),
+      entryControllers,
+    );
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+    // Fire staggered entry animations on first build.
+    useEffect(() {
+      for (var i = 0; i < entryControllers.length; i++) {
+        Future.delayed(kEntryStagger * (i + 1), () {
+          if (context.mounted) entryControllers[i].forward();
+        });
+      }
+      return null;
+    }, const []);
 
-  @override
-  Widget build(BuildContext context) {
+    // ── ELO persistence (runs once on mount) ────────────────────────────────
+
+    final previousElo = useRef(1000);
+
+    useEffect(() {
+      final eloRepo = ref.read(eloRepositoryProvider);
+      previousElo.value = eloRepo.getCurrentRating();
+
+      final state = ref.read(gameStateProvider);
+      final eloResult = state.eloResult;
+      if (eloResult != null) {
+        eloRepo.saveResult(eloResult).then((_) {
+          ref.invalidate(eloHistoryProvider);
+        });
+      }
+      return null;
+    }, const []);
+
+    // ── Navigation guard ────────────────────────────────────────────────────
+
+    final navigating = useRef(false);
+
+    void playAgain() {
+      if (navigating.value) return;
+      navigating.value = true;
+      final state = ref.read(gameStateProvider);
+      context.pushReplacement(
+        '/loading',
+        extra: GameConfig(topic: state.topic, difficulty: state.difficulty),
+      );
+    }
+
+    void newTopic() {
+      if (navigating.value) return;
+      navigating.value = true;
+      context.go('/topic');
+    }
+
+    void goHome() {
+      if (navigating.value) return;
+      navigating.value = true;
+      context.go('/home');
+    }
+
+    // ── Build ───────────────────────────────────────────────────────────────
+
     final state = ref.watch(gameStateProvider);
 
     final playerScore = state.playerScore;
     final botScore = state.botScore;
     final eloResult = state.eloResult;
     final delta = eloResult?.delta ?? 0;
-    final newElo = eloResult?.newRating ?? _previousElo;
+    final newElo = eloResult?.newRating ?? previousElo.value;
 
     final isWin = playerScore > botScore;
     final isTie = playerScore == botScore;
 
+    Widget staggerWrap(int index, {required Widget child}) {
+      return FadeTransition(
+        opacity: fadeAnimations[index],
+        child: SlideTransition(
+          position: slideAnimations[index],
+          child: child,
+        ),
+      );
+    }
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _goHome();
+        if (!didPop) goHome();
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -150,7 +141,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const Spacer(),
 
                 // 0 — Heading
-                _staggerWrap(
+                staggerWrap(
                   0,
                   child: const Text(
                     'Round Complete',
@@ -166,7 +157,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const SizedBox(height: 32),
 
                 // 1 — Score cards
-                _staggerWrap(
+                staggerWrap(
                   1,
                   child: Row(
                     children: [
@@ -194,7 +185,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const SizedBox(height: 24),
 
                 // 2 — Victory / Defeat / Draw
-                _staggerWrap(
+                staggerWrap(
                   2,
                   child: Text(
                     isTie
@@ -218,10 +209,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const SizedBox(height: 24),
 
                 // 3 — ELO row
-                _staggerWrap(
+                staggerWrap(
                   3,
                   child: _EloRow(
-                    previousElo: _previousElo,
+                    previousElo: previousElo.value,
                     delta: delta,
                     newElo: newElo,
                   ),
@@ -230,15 +221,15 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const Spacer(),
 
                 // 4 — Action buttons
-                _staggerWrap(
+                staggerWrap(
                   4,
                   child: Column(
                     children: [
                       // Play Again
-                      _PrimaryButton(label: 'Play Again', onTap: _playAgain),
+                      _PrimaryButton(label: 'Play Again', onTap: playAgain),
                       const SizedBox(height: 12),
                       // New Topic
-                      _OutlinedButton(label: 'New Topic', onTap: _newTopic),
+                      _OutlinedButton(label: 'New Topic', onTap: newTopic),
                     ],
                   ),
                 ),
@@ -246,10 +237,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
                 const SizedBox(height: 16),
 
                 // 5 — Home link
-                _staggerWrap(
+                staggerWrap(
                   5,
                   child: GestureDetector(
-                    onTap: _goHome,
+                    onTap: goHome,
                     child: const SizedBox(
                       height: 48,
                       child: Center(
@@ -269,13 +260,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen>
           ),
         ),
       ),
-    );
-  }
-
-  Widget _staggerWrap(int index, {required Widget child}) {
-    return FadeTransition(
-      opacity: _fadeAnimations[index],
-      child: SlideTransition(position: _slideAnimations[index], child: child),
     );
   }
 }

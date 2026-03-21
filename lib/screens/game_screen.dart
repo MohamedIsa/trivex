@@ -22,25 +22,22 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
-  final _timerKey = GlobalKey<GameTimerState>();
+  final _timerController = GameTimerController();
 
   /// Scale factor when a tile is being tapped.
   int? _pressedIndex;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  AnimationController? get _timerController =>
-      _timerKey.currentState?.controller;
-
   void _onTileTap(int index, GameState state) {
     if (state.isRevealing || state.isGameOver) return;
 
-    final controller = _timerController;
+    final controller = _timerController.controller;
     final remaining = controller != null
         ? ((1.0 - controller.value) * 15).round()
         : 0;
 
-    _timerKey.currentState?.cancel();
+    _timerController.cancel();
     ref
         .read(gameStateProvider.notifier)
         .selectAnswer(index, timeLeft: remaining);
@@ -71,8 +68,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   _TopBar(state: state),
 
                   // ── Timer bar ────────────────────────────────────────────
-                  GameTimer(key: _timerKey),
-                  _TimerBar(timerKey: _timerKey),
+                  GameTimer(timerController: _timerController),
+                  _TimerBar(timerController: _timerController),
 
                   // ── Question + Tiles ─────────────────────────────────────
                   Expanded(
@@ -153,7 +150,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               ),
 
               // ── Reveal overlay (UI-005) ─────────────────────────────────
-              RevealBottomSheet(timerKey: _timerKey),
+              RevealBottomSheet(timerController: _timerController),
             ],
           ),
         ),
@@ -228,9 +225,9 @@ class _TopBar extends StatelessWidget {
 // ── Timer bar ───────────────────────────────────────────────────────────────
 
 class _TimerBar extends StatelessWidget {
-  const _TimerBar({required this.timerKey});
+  const _TimerBar({required this.timerController});
 
-  final GlobalKey<GameTimerState> timerKey;
+  final GameTimerController timerController;
 
   Color _barColor(double remaining) {
     if (remaining > 0.6) return AppColors.primary;
@@ -240,7 +237,7 @@ class _TimerBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = timerKey.currentState?.controller;
+    final controller = timerController.controller;
 
     // If the controller isn't ready yet, draw the full-width bar.
     if (controller == null) {

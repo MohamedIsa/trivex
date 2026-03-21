@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
@@ -10,83 +11,69 @@ import '../theme/app_shadows.dart';
 import '../widgets/elo_sparkline.dart';
 
 /// Home screen — ELO display, sparkline & Play button (UI-001).
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen>
-    with TickerProviderStateMixin {
-  // ── Entry animation controllers ───────────────────────────────────────────
-
-  late final AnimationController _wordmarkCtrl;
-  late final AnimationController _eloCtrl;
-  late final AnimationController _buttonCtrl;
-
-  // Wordmark — slide from left + fade.
-  late final Animation<double> _wordmarkFade;
-  late final Animation<Offset> _wordmarkSlide;
-
-  // ELO group (number + label + sparkline) — slide from below + fade.
-  late final Animation<double> _eloFade;
-  late final Animation<Offset> _eloSlide;
-
-  // Play button — slide from below + fade.
-  late final Animation<double> _buttonFade;
-  late final Animation<Offset> _buttonSlide;
-
-  @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ── Entry animation controllers ─────────────────────────────────────────
 
     // Wordmark — 0 ms delay, 500 ms duration.
-    _wordmarkCtrl = AnimationController(vsync: this, duration: kEntryDuration);
-    _wordmarkFade = CurvedAnimation(parent: _wordmarkCtrl, curve: kEntryCurve);
-    _wordmarkSlide = Tween<Offset>(
-      begin: const Offset(-0.15, 0),
-      end: Offset.zero,
-    ).animate(_wordmarkFade);
+    final wordmarkCtrl = useAnimationController(duration: kEntryDuration);
+    final wordmarkFade = useMemoized(
+      () => CurvedAnimation(parent: wordmarkCtrl, curve: kEntryCurve),
+      [wordmarkCtrl],
+    );
+    final wordmarkSlide = useMemoized(
+      () => Tween<Offset>(
+        begin: const Offset(-0.15, 0),
+        end: Offset.zero,
+      ).animate(wordmarkFade),
+      [wordmarkFade],
+    );
 
     // ELO group — 200 ms delay, 500 ms duration.
-    _eloCtrl = AnimationController(vsync: this, duration: kEntryDuration);
-    _eloFade = CurvedAnimation(parent: _eloCtrl, curve: kEntryCurve);
-    _eloSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(_eloFade);
+    final eloCtrl = useAnimationController(duration: kEntryDuration);
+    final eloFade = useMemoized(
+      () => CurvedAnimation(parent: eloCtrl, curve: kEntryCurve),
+      [eloCtrl],
+    );
+    final eloSlide = useMemoized(
+      () => Tween<Offset>(
+        begin: const Offset(0, 0.08),
+        end: Offset.zero,
+      ).animate(eloFade),
+      [eloFade],
+    );
 
     // Play button — 600 ms delay, 500 ms duration.
-    _buttonCtrl = AnimationController(vsync: this, duration: kEntryDuration);
-    _buttonFade = CurvedAnimation(parent: _buttonCtrl, curve: kEntryCurve);
-    _buttonSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(_buttonFade);
+    final buttonCtrl = useAnimationController(duration: kEntryDuration);
+    final buttonFade = useMemoized(
+      () => CurvedAnimation(parent: buttonCtrl, curve: kEntryCurve),
+      [buttonCtrl],
+    );
+    final buttonSlide = useMemoized(
+      () => Tween<Offset>(
+        begin: const Offset(0, 0.08),
+        end: Offset.zero,
+      ).animate(buttonFade),
+      [buttonFade],
+    );
 
-    // Fire staggered.
-    _wordmarkCtrl.forward();
-    Future.delayed(kEntryStagger * 2, () {
-      if (mounted) _eloCtrl.forward();
-    });
-    Future.delayed(kEntryStagger * 6, () {
-      if (mounted) _buttonCtrl.forward();
-    });
-  }
+    // Fire staggered entry animations on first build.
+    useEffect(() {
+      wordmarkCtrl.forward();
+      Future.delayed(kEntryStagger * 2, () {
+        if (context.mounted) eloCtrl.forward();
+      });
+      Future.delayed(kEntryStagger * 6, () {
+        if (context.mounted) buttonCtrl.forward();
+      });
+      return null;
+    }, const []);
 
-  @override
-  void dispose() {
-    _wordmarkCtrl.dispose();
-    _eloCtrl.dispose();
-    _buttonCtrl.dispose();
-    super.dispose();
-  }
+    // ── Build ───────────────────────────────────────────────────────────────
 
-  // ── Build ─────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
     final historyAsync = ref.watch(eloHistoryProvider);
 
     return Scaffold(
@@ -99,14 +86,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           error: (_, _) => const Center(
             child: CircularProgressIndicator(color: AppColors.teal),
           ),
-          data: (history) =>
-              _buildContent(history.isEmpty ? 1000 : history.last.rating),
+          data: (history) => _buildContent(
+            context,
+            rating: history.isEmpty ? 1000 : history.last.rating,
+            wordmarkFade: wordmarkFade,
+            wordmarkSlide: wordmarkSlide,
+            eloFade: eloFade,
+            eloSlide: eloSlide,
+            buttonFade: buttonFade,
+            buttonSlide: buttonSlide,
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildContent(int rating) {
+Widget _buildContent(
+  BuildContext context, {
+  required int rating,
+  required Animation<double> wordmarkFade,
+  required Animation<Offset> wordmarkSlide,
+  required Animation<double> eloFade,
+  required Animation<Offset> eloSlide,
+  required Animation<double> buttonFade,
+  required Animation<Offset> buttonSlide,
+}) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: kScreenPaddingH,
@@ -117,9 +122,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         children: [
           // ── Wordmark ──────────────────────────────────────────────────
           FadeTransition(
-            opacity: _wordmarkFade,
+            opacity: wordmarkFade,
             child: SlideTransition(
-              position: _wordmarkSlide,
+              position: wordmarkSlide,
               child: RichText(
                 text: const TextSpan(
                   children: [
@@ -149,9 +154,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
           // ── ELO group ─────────────────────────────────────────────────
           FadeTransition(
-            opacity: _eloFade,
+            opacity: eloFade,
             child: SlideTransition(
-              position: _eloSlide,
+              position: eloSlide,
               child: Column(
                 children: [
                   // ELO number
@@ -191,9 +196,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
           // ── Play button ───────────────────────────────────────────────
           FadeTransition(
-            opacity: _buttonFade,
+            opacity: buttonFade,
             child: SlideTransition(
-              position: _buttonSlide,
+              position: buttonSlide,
               child: GestureDetector(
                 onTap: () => context.push('/topic'),
                 child: Container(
@@ -222,4 +227,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
-}

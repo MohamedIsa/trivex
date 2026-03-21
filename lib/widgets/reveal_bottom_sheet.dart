@@ -1,8 +1,9 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
@@ -16,102 +17,78 @@ import '../widgets/game_timer.dart';
 ///
 /// Shows result icon, heading, explanation box, and Next / Results button.
 /// Mounted as a [Stack] child inside [GameScreen].
-class RevealBottomSheet extends ConsumerStatefulWidget {
-  const RevealBottomSheet({super.key, required this.timerKey});
+class RevealBottomSheet extends HookConsumerWidget {
+  const RevealBottomSheet({super.key, required this.timerController});
 
-  /// Used to call [GameTimerState.restart] when the player taps "Next".
-  final GlobalKey<GameTimerState> timerKey;
-
-  @override
-  ConsumerState<RevealBottomSheet> createState() => _RevealBottomSheetState();
-}
-
-class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _slideController;
-  late final Animation<Offset> _offsetAnimation;
-  bool _nextPressed = false;
+  /// Shared controller for restarting the timer when the player taps "Next".
+  final GameTimerController timerController;
 
   @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final slideController = useAnimationController(duration: kEntryDuration);
 
-    _slideController = AnimationController(
-      vsync: this,
-      duration: kEntryDuration,
+    final offsetAnimation = useMemoized(
+      () => Tween<Offset>(
+        begin: const Offset(0, 1), // fully off-screen below
+        end: Offset.zero,
+      ).animate(
+        CurvedAnimation(parent: slideController, curve: kSpringCurve),
+      ),
+      [slideController],
     );
 
-    // Approximate spring with easeOutBack — fast overshoot, then settle.
-    _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0, 1), // fully off-screen below
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: kSpringCurve));
-  }
+    final nextPressed = useState(false);
 
-  @override
-  void dispose() {
-    _slideController.dispose();
-    super.dispose();
-  }
+    // Sync sheet on first build if already revealing.
+    useEffect(() {
+      final isRevealing = ref.read(gameStateProvider).isRevealing;
+      if (isRevealing &&
+          !slideController.isAnimating &&
+          slideController.value == 0) {
+        slideController.forward();
+      }
+      return null;
+    }, const []);
 
-  // ── React to isRevealing changes ──────────────────────────────────────────
+    // ── Next / Results tap ──────────────────────────────────────────────────
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncSheet();
-  }
+    void onNextTap() {
+      final notifier = ref.read(gameStateProvider.notifier);
 
-  void _syncSheet() {
-    final isRevealing = ref.read(gameStateProvider).isRevealing;
-    if (isRevealing &&
-        !_slideController.isAnimating &&
-        _slideController.value == 0) {
-      _slideController.forward();
+      notifier.nextQuestion();
+
+      final newState = ref.read(gameStateProvider);
+
+      if (newState.isGameOver) {
+        context.pushReplacement('/result');
+      } else {
+        // Slide sheet down, then restart timer for the next question.
+        slideController.reverse().then((_) {
+          timerController.restart();
+        });
+      }
     }
-  }
 
-  // ── Next / Results tap ────────────────────────────────────────────────────
+    // ── Build ───────────────────────────────────────────────────────────────
 
-  void _onNextTap() {
-    final notifier = ref.read(gameStateProvider.notifier);
-
-    notifier.nextQuestion();
-
-    final newState = ref.read(gameStateProvider);
-
-    if (newState.isGameOver) {
-      context.pushReplacement('/result');
-    } else {
-      // Slide sheet down, then restart timer for the next question.
-      _slideController.reverse().then((_) {
-        widget.timerKey.currentState?.restart();
-      });
-    }
-  }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
     final state = ref.watch(gameStateProvider);
 
     // Drive slide in/out reactively via ref.listen (not a side effect in build).
     ref.listen<GameState>(gameStateProvider, (previous, next) {
       if (next.isRevealing &&
-          _slideController.status == AnimationStatus.dismissed) {
-        _slideController.forward();
+          slideController.status == AnimationStatus.dismissed) {
+        slideController.forward();
       } else if (!next.isRevealing &&
-          _slideController.status == AnimationStatus.completed) {
-        _slideController.reverse();
+          slideController.status == AnimationStatus.completed) {
+        slideController.reverse();
       }
     });
 
     // Don't render anything when fully hidden and not animating.
     return AnimatedBuilder(
-      animation: _slideController,
+      animation: slideController,
       builder: (_, _) {
-        if (_slideController.value == 0) return const SizedBox.shrink();
+        if (slideController.value == 0) return const SizedBox.shrink();
 
         return Stack(
           children: [
@@ -119,7 +96,7 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
             GestureDetector(
               onTap: () {}, // absorb taps — do NOT dismiss
               child: FadeTransition(
-                opacity: _slideController,
+                opacity: slideController,
                 child: ClipRect(
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
@@ -134,16 +111,16 @@ class _RevealBottomSheetState extends ConsumerState<RevealBottomSheet>
               alignment: Alignment.bottomCenter,
               child: RepaintBoundary(
                 child: SlideTransition(
-                  position: _offsetAnimation,
+                  position: offsetAnimation,
                   child: _SheetPanel(
                     state: state,
-                    isNextPressed: _nextPressed,
-                    onNextTapDown: () => setState(() => _nextPressed = true),
+                    isNextPressed: nextPressed.value,
+                    onNextTapDown: () => nextPressed.value = true,
                     onNextTapUp: () {
-                      setState(() => _nextPressed = false);
-                      _onNextTap();
+                      nextPressed.value = false;
+                      onNextTap();
                     },
-                    onNextTapCancel: () => setState(() => _nextPressed = false),
+                    onNextTapCancel: () => nextPressed.value = false,
                   ),
                 ),
               ),

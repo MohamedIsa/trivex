@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 
 import '../constants/animation_constants.dart';
@@ -8,72 +9,61 @@ import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
 /// Topic selection + difficulty picker (UI-002).
-class TopicScreen extends StatefulWidget {
+class TopicScreen extends HookWidget {
   const TopicScreen({super.key});
 
   @override
-  State<TopicScreen> createState() => _TopicScreenState();
-}
-
-class _TopicScreenState extends State<TopicScreen>
-    with SingleTickerProviderStateMixin {
-  final _topicCtrl = TextEditingController();
-  String _difficulty = 'medium';
-
-  // ── Entry animation ───────────────────────────────────────────────────────
-
-  late final AnimationController _entryCtrl;
-  late final Animation<double> _entryFade;
-  late final Animation<Offset> _entrySlide;
-
-  @override
-  void initState() {
-    super.initState();
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: kTopicEntryDuration,
-    );
-    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: kEntryCurve);
-    _entrySlide = Tween<Offset>(
-      begin: const Offset(0, 0.06),
-      end: Offset.zero,
-    ).animate(_entryFade);
-    _entryCtrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _topicCtrl.dispose();
-    _entryCtrl.dispose();
-    super.dispose();
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  bool get _canStart => _topicCtrl.text.trim().isNotEmpty;
-
-  void _start() {
-    if (!_canStart) return;
-    context.push(
-      '/loading',
-      extra: GameConfig(
-        topic: _topicCtrl.text.trim(),
-        difficulty: _difficulty,
-      ),
-    );
-  }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
-
-  @override
   Widget build(BuildContext context) {
+    final topicCtrl = useTextEditingController();
+    final difficulty = useState('medium');
+
+    // ── Entry animation ─────────────────────────────────────────────────────
+
+    final entryCtrl = useAnimationController(duration: kTopicEntryDuration);
+    final entryFade = useMemoized(
+      () => CurvedAnimation(parent: entryCtrl, curve: kEntryCurve),
+      [entryCtrl],
+    );
+    final entrySlide = useMemoized(
+      () => Tween<Offset>(
+        begin: const Offset(0, 0.06),
+        end: Offset.zero,
+      ).animate(entryFade),
+      [entryFade],
+    );
+
+    useEffect(() {
+      entryCtrl.forward();
+      return null;
+    }, const []);
+
+    // Rebuild when text changes (drives _canStart).
+    useListenable(topicCtrl);
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+
+    bool canStart() => topicCtrl.text.trim().isNotEmpty;
+
+    void start() {
+      if (!canStart()) return;
+      context.push(
+        '/loading',
+        extra: GameConfig(
+          topic: topicCtrl.text.trim(),
+          difficulty: difficulty.value,
+        ),
+      );
+    }
+
+    // ── Build ───────────────────────────────────────────────────────────────
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: FadeTransition(
-          opacity: _entryFade,
+          opacity: entryFade,
           child: SlideTransition(
-            position: _entrySlide,
+            position: entrySlide,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: kScreenPaddingH,
@@ -112,10 +102,9 @@ class _TopicScreenState extends State<TopicScreen>
 
                   // ── Topic TextField ───────────────────────────────────
                   TextField(
-                    controller: _topicCtrl,
+                    controller: topicCtrl,
                     textInputAction: TextInputAction.go,
-                    onSubmitted: (_) => _start(),
-                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => start(),
                     style: const TextStyle(
                       color: AppColors.foreground,
                       fontSize: 16,
@@ -151,20 +140,20 @@ class _TopicScreenState extends State<TopicScreen>
                     children: [
                       _DifficultyPill(
                         label: 'Easy',
-                        selected: _difficulty == 'easy',
-                        onTap: () => setState(() => _difficulty = 'easy'),
+                        selected: difficulty.value == 'easy',
+                        onTap: () => difficulty.value = 'easy',
                       ),
                       const SizedBox(width: 12),
                       _DifficultyPill(
                         label: 'Medium',
-                        selected: _difficulty == 'medium',
-                        onTap: () => setState(() => _difficulty = 'medium'),
+                        selected: difficulty.value == 'medium',
+                        onTap: () => difficulty.value = 'medium',
                       ),
                       const SizedBox(width: 12),
                       _DifficultyPill(
                         label: 'Hard',
-                        selected: _difficulty == 'hard',
-                        onTap: () => setState(() => _difficulty = 'hard'),
+                        selected: difficulty.value == 'hard',
+                        onTap: () => difficulty.value = 'hard',
                       ),
                     ],
                   ),
@@ -172,7 +161,7 @@ class _TopicScreenState extends State<TopicScreen>
                   const Spacer(),
 
                   // ── Start button ──────────────────────────────────────
-                  _StartButton(enabled: _canStart, onTap: _start),
+                  _StartButton(enabled: canStart(), onTap: start),
 
                   const SizedBox(height: 24),
                 ],

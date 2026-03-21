@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../constants/animation_constants.dart';
@@ -12,220 +13,165 @@ import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
 /// Loading screen — pulsing wordmark, question fetch, error retry (UI-003).
-class LoadingScreen extends ConsumerStatefulWidget {
+class LoadingScreen extends HookConsumerWidget {
   const LoadingScreen({super.key, this.gameConfig});
 
   /// Game configuration passed via [GoRouter] typed extras.
   final GameConfig? gameConfig;
 
   @override
-  ConsumerState<LoadingScreen> createState() => _LoadingScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ── Animation ───────────────────────────────────────────────────────────
 
-class _LoadingScreenState extends ConsumerState<LoadingScreen>
-    with SingleTickerProviderStateMixin {
-  // ── Animation ─────────────────────────────────────────────────────────────
+    final pulseCtrl = useAnimationController(duration: kWordmarkPulse);
+    final pulseOpacity = useMemoized(
+      () => Tween<double>(begin: 1.0, end: 0.6).animate(
+        CurvedAnimation(parent: pulseCtrl, curve: kPulseCurve),
+      ),
+      [pulseCtrl],
+    );
+    final pulseScale = useMemoized(
+      () => Tween<double>(begin: 1.0, end: 0.98).animate(
+        CurvedAnimation(parent: pulseCtrl, curve: kPulseCurve),
+      ),
+      [pulseCtrl],
+    );
 
-  late final AnimationController _pulseCtrl;
-  late final Animation<double> _pulseOpacity;
-  late final Animation<double> _pulseScale;
+    // Start pulse loop on mount.
+    useEffect(() {
+      pulseCtrl.repeat(reverse: true);
+      return null;
+    }, const []);
 
-  // ── HTTP client (owned, closed on dispose) ───────────────────────────────
+    // ── HTTP client (closed on unmount) ─────────────────────────────────────
 
-  final http.Client _client = http.Client();
+    final client = useMemoized(http.Client.new);
+    useEffect(() => client.close, const []);
 
-  // ── State ─────────────────────────────────────────────────────────────────
+    // ── Mutable state ───────────────────────────────────────────────────────
 
-  bool _fetching = false;
-  bool _cancelled = false;
-  String? _error;
+    final fetching = useState(false);
+    final cancelled = useRef(false);
+    final error = useState<String?>(null);
+    final entryOpacity = useState(0.0);
 
-  // ── Entry fade ────────────────────────────────────────────────────────────
+    // ── Fetch logic ─────────────────────────────────────────────────────────
 
-  double _entryOpacity = 0;
+    Future<void> fetchQuestions() async {
+      if (fetching.value) return;
+      fetching.value = true;
+      error.value = null;
 
-  @override
-  void initState() {
-    super.initState();
+      final config = gameConfig;
+      if (config == null) {
+        fetching.value = false;
+        error.value = 'Missing game configuration.';
+        return;
+      }
 
-    // Pulse: opacity 1→0.6→1, scale 1→0.98→1, 2s loop.
-    _pulseCtrl = AnimationController(vsync: this, duration: kWordmarkPulse)
-      ..repeat(reverse: true);
+      try {
+        final questions = await QuestionService(
+          client: client,
+        ).fetchQuestions(config);
 
-    _pulseOpacity = Tween<double>(
-      begin: 1.0,
-      end: 0.6,
-    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve));
-    _pulseScale = Tween<double>(
-      begin: 1.0,
-      end: 0.98,
-    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: kPulseCurve));
+        if (cancelled.value || !context.mounted) return;
 
-    // Fade in.
-    Future.microtask(() {
-      if (mounted) setState(() => _entryOpacity = 1);
-    });
+        // Initialise game state before navigating.
+        ref
+            .read(gameStateProvider.notifier)
+            .initGame(
+              questions,
+              topic: config.topic,
+              difficulty: config.difficulty,
+            );
 
-    // Deferred so the widget is fully mounted before starting the fetch.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _fetchQuestions();
-    });
-  }
-
-  @override
-  void dispose() {
-    _cancelled = true;
-    _client.close();
-    _pulseCtrl.dispose();
-    super.dispose();
-  }
-
-  // ── Fetch ─────────────────────────────────────────────────────────────────
-
-  Future<void> _fetchQuestions() async {
-    if (_fetching) return;
-    setState(() {
-      _fetching = true;
-      _error = null;
-    });
-
-    final config = _gameConfig;
-    if (config == null) {
-      setState(() {
-        _fetching = false;
-        _error = 'Missing game configuration.';
-      });
-      return;
+        if (!context.mounted) return;
+        context.pushReplacement('/game');
+      } catch (e) {
+        if (cancelled.value || !context.mounted) return;
+        pulseCtrl.stop();
+        fetching.value = false;
+        error.value = e.toString();
+      }
     }
 
-    try {
-      final questions = await QuestionService(
-        client: _client,
-      ).fetchQuestions(config);
-
-      if (_cancelled || !mounted) return;
-
-      // Initialise game state before navigating.
-      ref
-          .read(gameStateProvider.notifier)
-          .initGame(
-            questions,
-            topic: config.topic,
-            difficulty: config.difficulty,
-          );
-
-      if (!mounted) return;
-      context.pushReplacement('/game');
-    } catch (e) {
-      if (_cancelled || !mounted) return;
-      _pulseCtrl.stop();
-      setState(() {
-        _fetching = false;
-        _error = e.toString();
-      });
+    void cancel() {
+      cancelled.value = true;
+      context.pop();
     }
-  }
 
-  GameConfig? get _gameConfig => widget.gameConfig;
+    // ── Entry fade + deferred fetch ─────────────────────────────────────────
 
-  void _cancel() {
-    _cancelled = true;
-    context.pop();
-  }
+    useEffect(() {
+      Future.microtask(() {
+        if (context.mounted) entryOpacity.value = 1;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) fetchQuestions();
+      });
+      return null;
+    }, const []);
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+    // ── Build ───────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _cancel();
+        if (!didPop) cancel();
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: AnimatedOpacity(
-          opacity: _entryOpacity,
+          opacity: entryOpacity.value,
           duration: kRevealSlide,
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: _error != null ? _buildError() : _buildLoading(),
+              child: error.value != null
+                  ? _buildError(
+                      error: error.value!,
+                      onRetry: () {
+                        cancelled.value = false;
+                        pulseCtrl.repeat(reverse: true);
+                        fetchQuestions();
+                      },
+                      onCancel: cancel,
+                    )
+                  : _buildLoading(
+                      pulseCtrl: pulseCtrl,
+                      pulseOpacity: pulseOpacity,
+                      pulseScale: pulseScale,
+                      onCancel: cancel,
+                    ),
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildLoading() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Pulsing wordmark.
-        AnimatedBuilder(
-          animation: _pulseCtrl,
-          builder: (_, child) {
-            return Opacity(
-              opacity: _pulseOpacity.value,
-              child: Transform.scale(scale: _pulseScale.value, child: child),
-            );
-          },
-          child: RichText(
-            text: const TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Triv',
-                  style: TextStyle(
-                    color: AppColors.foreground,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextSpan(
-                  text: 'ex',
-                  style: TextStyle(
-                    color: AppColors.teal,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
+// ── Build helpers (top-level, stateless) ────────────────────────────────────
 
-        // Subtitle.
-        const Text(
-          'Generating questions…',
-          style: TextStyle(color: AppColors.foreground, fontSize: 18),
-        ),
-        const SizedBox(height: 48),
-
-        // Cancel.
-        GestureDetector(
-          onTap: _cancel,
-          child: const SizedBox(
-            height: 48,
-            child: Center(
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.muted, fontSize: 16),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildError() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Wordmark (static).
-        RichText(
+Widget _buildLoading({
+  required AnimationController pulseCtrl,
+  required Animation<double> pulseOpacity,
+  required Animation<double> pulseScale,
+  required VoidCallback onCancel,
+}) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      // Pulsing wordmark.
+      AnimatedBuilder(
+        animation: pulseCtrl,
+        builder: (_, child) {
+          return Opacity(
+            opacity: pulseOpacity.value,
+            child: Transform.scale(scale: pulseScale.value, child: child),
+          );
+        },
+        child: RichText(
           text: const TextSpan(
             children: [
               TextSpan(
@@ -247,58 +193,111 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
             ],
           ),
         ),
-        const SizedBox(height: 24),
+      ),
+      const SizedBox(height: 24),
 
-        // Error message.
-        Text(
-          _error!,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: AppColors.red, fontSize: 16),
-        ),
-        const SizedBox(height: 32),
+      // Subtitle.
+      const Text(
+        'Generating questions…',
+        style: TextStyle(color: AppColors.foreground, fontSize: 18),
+      ),
+      const SizedBox(height: 48),
 
-        // Try Again.
-        GestureDetector(
-          onTap: () {
-            _cancelled = false;
-            _pulseCtrl.repeat(reverse: true);
-            _fetchQuestions();
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(kButtonRadius),
-              boxShadow: [AppShadows.primaryGlow],
+      // Cancel.
+      GestureDetector(
+        onTap: onCancel,
+        child: const SizedBox(
+          height: 48,
+          child: Center(
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.muted, fontSize: 16),
             ),
-            alignment: Alignment.center,
-            child: const Text(
-              'Try Again',
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildError({
+  required String error,
+  required VoidCallback onRetry,
+  required VoidCallback onCancel,
+}) {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      // Wordmark (static).
+      RichText(
+        text: const TextSpan(
+          children: [
+            TextSpan(
+              text: 'Triv',
               style: TextStyle(
                 color: AppColors.foreground,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
+            TextSpan(
+              text: 'ex',
+              style: TextStyle(
+                color: AppColors.teal,
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
+      ),
+      const SizedBox(height: 24),
 
-        // Cancel.
-        GestureDetector(
-          onTap: _cancel,
-          child: const SizedBox(
-            height: 48,
-            child: Center(
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.muted, fontSize: 16),
-              ),
+      // Error message.
+      Text(
+        error,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: AppColors.red, fontSize: 16),
+      ),
+      const SizedBox(height: 32),
+
+      // Try Again.
+      GestureDetector(
+        onTap: onRetry,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(kButtonRadius),
+            boxShadow: [AppShadows.primaryGlow],
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'Try Again',
+            style: TextStyle(
+              color: AppColors.foreground,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 16),
+
+      // Cancel.
+      GestureDetector(
+        onTap: onCancel,
+        child: const SizedBox(
+          height: 48,
+          child: Center(
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.muted, fontSize: 16),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
 }
