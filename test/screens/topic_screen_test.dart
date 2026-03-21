@@ -136,6 +136,46 @@ void main() {
         final config = pushedState!.extra as GameConfig;
         expect(config.topic, 'Science');
         expect(config.difficulty, 'medium'); // default
+        expect(config.count, 10); // default
+      },
+    );
+
+    // ── Tap "15" count chip → chip selected, GameConfig.count is 15 ───────
+
+    testWidgets(
+      'tap "15" chip — becomes selected, GameConfig.count is 15',
+      (tester) async {
+        GoRouterState? pushedState;
+
+        await _pumpTopicScreen(
+          tester,
+          onPush: (state) => pushedState = state,
+        );
+
+        // Tap the "15" count chip.
+        await tester.tap(find.text('15'));
+        await tester.pumpAndSettle();
+
+        // Verify the "15" chip shows the active (primary) background.
+        final chip15 = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text('15'),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final decoration = chip15.decoration as BoxDecoration;
+        expect(decoration.color, AppColors.primary);
+
+        // Enter text and tap Start to verify the config carries count: 15.
+        await tester.enterText(find.byType(TextField), 'Geography');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Start'));
+        await tester.pumpAndSettle();
+
+        expect(pushedState, isNotNull);
+        final config = pushedState!.extra as GameConfig;
+        expect(config.count, 15);
       },
     );
 

@@ -12,15 +12,20 @@ class GameConfig with _$GameConfig {
 
     /// One of: 'easy' | 'medium' | 'hard'
     required String difficulty,
+
+    /// Number of questions per round.
+    required int count,
   }) = _GameConfig;
 
   factory GameConfig.fromJson(Map<String, dynamic> json) => GameConfig(
         topic: json['topic'] as String,
         difficulty: json['difficulty'] as String,
+        count: json['count'] as int? ?? 10,
       );
 
   Map<String, dynamic> toJson() => {
         'topic': topic,
         'difficulty': difficulty,
+        'count': count,
       };
 }

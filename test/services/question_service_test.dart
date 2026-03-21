@@ -36,7 +36,7 @@ String _buildFixture({int count = 10}) {
 void main() {
   late MockClient mockClient;
   late QuestionService service;
-  const config = GameConfig(topic: 'Math', difficulty: 'easy');
+  const config = GameConfig(topic: 'Math', difficulty: 'easy', count: 10);
 
   setUp(() {
     mockClient = MockClient();
@@ -141,5 +141,30 @@ void main() {
     expect(bodyJson['topic'], 'Math');
     expect(bodyJson['difficulty'], 'easy');
     expect(bodyJson['count'], 10);
+  });
+
+  test('GameConfig(count: 5) — request body contains "count": 5', () async {
+    const config5 = GameConfig(topic: 'Science', difficulty: 'hard', count: 5);
+
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer(
+      (_) async => http.Response(_buildFixture(count: 5), 200),
+    );
+
+    await service.fetchQuestions(config5);
+
+    final captured = verify(mockClient.post(
+      any,
+      headers: captureAnyNamed('headers'),
+      body: captureAnyNamed('body'),
+    )).captured;
+
+    final bodyStr = captured[1] as String;
+    final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+    expect(bodyJson['count'], 5);
   });
 }

@@ -14,7 +14,7 @@ import 'package:trivex/screens/loading_screen.dart';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const _config = GameConfig(topic: 'History', difficulty: 'medium');
+const _config = GameConfig(topic: 'History', difficulty: 'medium', count: 10);
 
 /// Pumps [LoadingScreen] inside a [MaterialApp.router] with [GoRouter].
 ///

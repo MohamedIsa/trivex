@@ -168,7 +168,7 @@ class _SheetPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final correctIdx = state.currentQuestion.correctIndex;
     final correctLetter = String.fromCharCode(65 + correctIdx);
-    final isLastQuestion = state.currentIndex >= 9;
+    final isLastQuestion = state.currentIndex >= state.questions.length - 1;
 
     return Container(
       width: double.infinity,

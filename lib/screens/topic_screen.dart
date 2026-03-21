@@ -3,6 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 
 import '../constants/animation_constants.dart';
+import '../constants/game_constants.dart';
 import '../constants/layout_constants.dart';
 import '../models/game_config.dart';
 import '../theme/app_colors.dart';
@@ -16,6 +17,7 @@ class TopicScreen extends HookWidget {
   Widget build(BuildContext context) {
     final topicCtrl = useTextEditingController();
     final difficulty = useState('medium');
+    final questionCount = useState(kDefaultQuestionCount);
 
     // ── Entry animation ─────────────────────────────────────────────────────
 
@@ -51,6 +53,7 @@ class TopicScreen extends HookWidget {
         extra: GameConfig(
           topic: topicCtrl.text.trim(),
           difficulty: difficulty.value,
+          count: questionCount.value,
         ),
       );
     }
@@ -155,6 +158,26 @@ class TopicScreen extends HookWidget {
                         selected: difficulty.value == 'hard',
                         onTap: () => difficulty.value = 'hard',
                       ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Question count pills ────────────────────────────────
+                  Row(
+                    children: [
+                      for (int i = 0;
+                          i < kQuestionCountOptions.length;
+                          i++) ...[
+                        if (i > 0) const SizedBox(width: 12),
+                        _DifficultyPill(
+                          label: '${kQuestionCountOptions[i]}',
+                          selected: questionCount.value ==
+                              kQuestionCountOptions[i],
+                          onTap: () => questionCount.value =
+                              kQuestionCountOptions[i],
+                        ),
+                      ],
                     ],
                   ),
 

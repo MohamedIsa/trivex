@@ -6,7 +6,7 @@ part of 'elo_history_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$eloHistoryHash() => r'a5fc5b5f22e30a77ab009fc2ad6d7331e3a7e3ea';
+String _$eloHistoryHash() => r'f7c8971f5320259b9365bdad7011ba309d9263ea';
 
 /// Exposes the last-50 ELO history from the local Hive box.
 ///

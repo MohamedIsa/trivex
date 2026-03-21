@@ -142,7 +142,7 @@ class _TopBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Q ${state.currentIndex + 1} / 10',
+            'Q ${state.currentIndex + 1} / ${state.questions.length}',
             style: const TextStyle(
               color: AppColors.foreground,
               fontSize: 14,

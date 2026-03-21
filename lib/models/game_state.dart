@@ -17,7 +17,7 @@ class GameState with _$GameState {
     required String topic,
     required String difficulty,
 
-    /// Index of the currently displayed question (0–9).
+    /// Index of the currently displayed question (0-based).
     required int currentIndex,
     required int playerScore,
     required int botScore,
@@ -28,7 +28,7 @@ class GameState with _$GameState {
     /// True while the answer reveal animation / panel is visible.
     required bool isRevealing,
 
-    /// True after the 10th question has been answered / timed out.
+    /// True after the last question has been answered / timed out.
     required bool isGameOver,
 
     /// Populated by [GameStateNotifier] when [isGameOver] becomes true.

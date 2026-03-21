@@ -21,6 +21,9 @@ mixin _$GameConfig {
   /// One of: 'easy' | 'medium' | 'hard'
   String get difficulty => throw _privateConstructorUsedError;
 
+  /// Number of questions per round.
+  int get count => throw _privateConstructorUsedError;
+
   @JsonKey(ignore: true)
   $GameConfigCopyWith<GameConfig> get copyWith =>
       throw _privateConstructorUsedError;
@@ -32,7 +35,7 @@ abstract class $GameConfigCopyWith<$Res> {
           GameConfig value, $Res Function(GameConfig) then) =
       _$GameConfigCopyWithImpl<$Res, GameConfig>;
   @useResult
-  $Res call({String topic, String difficulty});
+  $Res call({String topic, String difficulty, int count});
 }
 
 /// @nodoc
@@ -50,6 +53,7 @@ class _$GameConfigCopyWithImpl<$Res, $Val extends GameConfig>
   $Res call({
     Object? topic = null,
     Object? difficulty = null,
+    Object? count = null,
   }) {
     return _then(_value.copyWith(
       topic: null == topic
@@ -60,6 +64,10 @@ class _$GameConfigCopyWithImpl<$Res, $Val extends GameConfig>
           ? _value.difficulty
           : difficulty // ignore: cast_nullable_to_non_nullable
               as String,
+      count: null == count
+          ? _value.count
+          : count // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -72,7 +80,7 @@ abstract class _$$GameConfigImplCopyWith<$Res>
       __$$GameConfigImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String topic, String difficulty});
+  $Res call({String topic, String difficulty, int count});
 }
 
 /// @nodoc
@@ -88,6 +96,7 @@ class __$$GameConfigImplCopyWithImpl<$Res>
   $Res call({
     Object? topic = null,
     Object? difficulty = null,
+    Object? count = null,
   }) {
     return _then(_$GameConfigImpl(
       topic: null == topic
@@ -98,6 +107,10 @@ class __$$GameConfigImplCopyWithImpl<$Res>
           ? _value.difficulty
           : difficulty // ignore: cast_nullable_to_non_nullable
               as String,
+      count: null == count
+          ? _value.count
+          : count // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -105,7 +118,8 @@ class __$$GameConfigImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$GameConfigImpl extends _GameConfig {
-  const _$GameConfigImpl({required this.topic, required this.difficulty})
+  const _$GameConfigImpl(
+      {required this.topic, required this.difficulty, required this.count})
       : super._();
 
   @override
@@ -115,9 +129,13 @@ class _$GameConfigImpl extends _GameConfig {
   @override
   final String difficulty;
 
+  /// Number of questions per round.
+  @override
+  final int count;
+
   @override
   String toString() {
-    return 'GameConfig(topic: $topic, difficulty: $difficulty)';
+    return 'GameConfig(topic: $topic, difficulty: $difficulty, count: $count)';
   }
 
   @override
@@ -127,11 +145,12 @@ class _$GameConfigImpl extends _GameConfig {
             other is _$GameConfigImpl &&
             (identical(other.topic, topic) || other.topic == topic) &&
             (identical(other.difficulty, difficulty) ||
-                other.difficulty == difficulty));
+                other.difficulty == difficulty) &&
+            (identical(other.count, count) || other.count == count));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, topic, difficulty);
+  int get hashCode => Object.hash(runtimeType, topic, difficulty, count);
 
   @JsonKey(ignore: true)
   @override
@@ -143,7 +162,8 @@ class _$GameConfigImpl extends _GameConfig {
 abstract class _GameConfig extends GameConfig {
   const factory _GameConfig(
       {required final String topic,
-      required final String difficulty}) = _$GameConfigImpl;
+      required final String difficulty,
+      required final int count}) = _$GameConfigImpl;
   const _GameConfig._() : super._();
 
   @override
@@ -152,6 +172,10 @@ abstract class _GameConfig extends GameConfig {
 
   /// One of: 'easy' | 'medium' | 'hard'
   String get difficulty;
+  @override
+
+  /// Number of questions per round.
+  int get count;
   @override
   @JsonKey(ignore: true)
   _$$GameConfigImplCopyWith<_$GameConfigImpl> get copyWith =>

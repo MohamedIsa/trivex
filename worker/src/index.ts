@@ -251,8 +251,8 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
         ? (difficulty.toLowerCase() as 'easy' | 'medium' | 'hard')
         : 'medium';
 
-    // Cap count at 15 server-side
-    const safeCount = Math.min(Math.max(1, Number(count) || 10), 15);
+    // Cap count between 1 and 20 server-side
+    const safeCount = Math.min(Math.max(1, Number(count) || 10), 20);
 
     // ── Call Workers AI with 15s timeout ─────────────────────────────────
     const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct';

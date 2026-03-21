@@ -84,7 +84,11 @@ class ResultScreen extends HookConsumerWidget {
       final state = ref.read(gameStateNotifierProvider);
       context.pushReplacement(
         '/loading',
-        extra: GameConfig(topic: state.topic, difficulty: state.difficulty),
+        extra: GameConfig(
+          topic: state.topic,
+          difficulty: state.difficulty,
+          count: state.questions.length,
+        ),
       );
     }
 

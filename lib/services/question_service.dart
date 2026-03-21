@@ -29,7 +29,7 @@ class QuestionService {
     final body = jsonEncode({
       'topic': config.topic,
       'difficulty': config.difficulty,
-      'count': 10,
+      'count': config.count,
     });
 
     late http.Response response;

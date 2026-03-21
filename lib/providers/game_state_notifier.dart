@@ -71,12 +71,12 @@ class GameStateNotifier extends _$GameStateNotifier {
     );
   }
 
-  /// Advances to the next question, or ends the game after Q10.
+  /// Advances to the next question, or ends the game after the last question.
   ///
   /// When the game ends, the player's current persisted ELO is read from
   /// [EloRepository] and the delta is computed via [EloService].
   void nextQuestion() {
-    if (state.currentIndex >= 9) {
+    if (state.currentIndex >= state.questions.length - 1) {
       // Last question was just revealed — game over.
       final playerRating = _eloRepository.getCurrentRating();
       final playerWon = state.playerScore > state.botScore;
