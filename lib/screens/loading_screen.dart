@@ -62,7 +62,11 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen>
       if (mounted) setState(() => _entryOpacity = 1);
     });
 
-    _fetchQuestions();
+    // Deferred so ModalRoute.of(context) is available (depends on inherited
+    // widget which is not accessible during initState).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fetchQuestions();
+    });
   }
 
   @override

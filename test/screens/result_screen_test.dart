@@ -1,0 +1,253 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:trivex/models/elo_record.dart';
+import 'package:trivex/models/game_state.dart';
+import 'package:trivex/models/question.dart';
+import 'package:trivex/providers/elo_history_provider.dart';
+import 'package:trivex/providers/game_state_notifier.dart';
+import 'package:trivex/repositories/elo_repository.dart';
+import 'package:trivex/screens/result_screen.dart';
+import 'package:trivex/services/elo_service.dart';
+
+// ---------------------------------------------------------------------------
+// Fakes — no Hive I/O
+// ---------------------------------------------------------------------------
+
+/// In-memory [EloRepository] so tests never touch Hive.
+class _FakeEloRepository extends EloRepository {
+  int _rating = 1000;
+  final List<EloRecord> _records = [];
+
+  @override
+  int getCurrentRating() => _rating;
+
+  @override
+  Future<void> saveResult(EloResult result) async {
+    _rating = result.newRating;
+    _records.add(
+      EloRecord(rating: result.newRating, timestamp: DateTime.now()),
+    );
+  }
+
+  @override
+  List<EloRecord> getHistory() => List.unmodifiable(_records);
+}
+
+/// Exposes the protected `state` setter so we can seed an exact [GameState]
+/// without playing through 10 questions.
+class _SeedableNotifier extends GameStateNotifier {
+  _SeedableNotifier(super.repo);
+  void seed(GameState s) => state = s;
+}
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+Question _q(int i) => Question(
+      id: 'q$i',
+      question: 'Question $i',
+      options: ['A', 'B', 'C', 'D'],
+      correctIndex: 0,
+      explanation: 'Because $i.',
+    );
+
+List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
+
+GameState _winState() {
+  final elo = EloService.calculate(1000, true);
+  return GameState(
+    questions: _tenQuestions(),
+    topic: 'Test',
+    difficulty: 'medium',
+    currentIndex: 9,
+    playerScore: 500,
+    botScore: 200,
+    selectedIndex: 0,
+    isRevealing: false,
+    isGameOver: true,
+    eloResult: elo,
+  );
+}
+
+GameState _loseState() {
+  final elo = EloService.calculate(1000, false);
+  return GameState(
+    questions: _tenQuestions(),
+    topic: 'Test',
+    difficulty: 'medium',
+    currentIndex: 9,
+    playerScore: 100,
+    botScore: 400,
+    selectedIndex: 0,
+    isRevealing: false,
+    isGameOver: true,
+    eloResult: elo,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Pumps [ResultScreen] with the given [state] pre-seeded.
+/// Uses a phone-sized surface and fully-faked providers (no Hive).
+Future<ProviderContainer> _pumpResultScreen(
+  WidgetTester tester, {
+  required GameState state,
+  void Function(RouteSettings)? onRoute,
+}) async {
+  tester.view.physicalSize = const Size(1080, 1920);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  final fakeRepo = _FakeEloRepository();
+
+  final container = ProviderContainer(
+    overrides: [
+      eloRepositoryProvider.overrideWithValue(fakeRepo),
+      gameStateProvider.overrideWith((ref) {
+        final notifier = _SeedableNotifier(fakeRepo);
+        notifier.seed(state);
+        return notifier;
+      }),
+      eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        home: const ResultScreen(),
+        onGenerateRoute: (settings) {
+          onRoute?.call(settings);
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => Scaffold(body: Text('route: ${settings.name}')),
+          );
+        },
+      ),
+    ),
+  );
+
+  // Walk past the 6 staggered entry animations
+  //   Future.delayed(100ms × i) + AnimationController(500ms)
+  // Total ≈ 1100ms.  6 × 200ms = 1200ms covers them all.
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+
+  return container;
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  group('ResultScreen', () {
+    // ── Player wins → "Victory" label visible ─────────────────────────────
+
+    testWidgets(
+      'player wins — "Victory" label visible',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _winState());
+
+        expect(find.text('Victory'), findsOneWidget);
+      },
+    );
+
+    // ── Player loses → "Defeat" label visible ─────────────────────────────
+
+    testWidgets(
+      'player loses — "Defeat" label visible',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _loseState());
+
+        expect(find.text('Defeat'), findsOneWidget);
+      },
+    );
+
+    // ── ELO delta positive → trending_up icon + "+n" text ─────────────────
+
+    testWidgets(
+      'ELO delta positive — Icons.trending_up visible',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _winState());
+
+        expect(find.byIcon(Icons.trending_up), findsOneWidget);
+        expect(find.textContaining('+'), findsWidgets);
+      },
+    );
+
+    // ── Tap "Play Again" → navigates to /loading ──────────────────────────
+
+    testWidgets(
+      'tap "Play Again" — navigates to /loading',
+      (tester) async {
+        String? pushedRoute;
+
+        await _pumpResultScreen(
+          tester,
+          state: _winState(),
+          onRoute: (s) => pushedRoute = s.name,
+        );
+
+        await tester.tap(find.text('Play Again'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(pushedRoute, '/loading');
+      },
+    );
+
+    // ── Tap "New Topic" → navigates to /topic ─────────────────────────────
+
+    testWidgets(
+      'tap "New Topic" — navigates to /topic',
+      (tester) async {
+        String? pushedRoute;
+
+        await _pumpResultScreen(
+          tester,
+          state: _winState(),
+          onRoute: (s) => pushedRoute = s.name,
+        );
+
+        await tester.tap(find.text('New Topic'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(pushedRoute, '/topic');
+      },
+    );
+
+    // ── Tap "Home" → navigation stack cleared, at /home ───────────────────
+
+    testWidgets(
+      'tap "Home" — navigates to /home',
+      (tester) async {
+        String? pushedRoute;
+
+        await _pumpResultScreen(
+          tester,
+          state: _winState(),
+          onRoute: (s) => pushedRoute = s.name,
+        );
+
+        await tester.tap(find.text('Home'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(pushedRoute, '/home');
+      },
+    );
+  });
+}
