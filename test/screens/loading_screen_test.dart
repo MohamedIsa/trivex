@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import 'package:trivex/models/game_config.dart';
 import 'package:trivex/screens/loading_screen.dart';
@@ -167,6 +171,53 @@ void main() {
         await tester.pump();
 
         expect(find.text('Missing game configuration.'), findsOneWidget);
+      },
+    );
+
+    // ── Happy path — fetch succeeds, navigates to /game ───────────────────
+
+    testWidgets(
+      'QuestionService succeeds — navigates to /game with question list',
+      (tester) async {
+        String? navigatedTo;
+
+        await http.runWithClient(
+          () async {
+            await _pumpLoadingScreen(
+              tester,
+              onRoute: (route) => navigatedTo = route,
+            );
+
+            // Trigger the post-frame callback → _fetchQuestions starts.
+            await tester.pump();
+
+            // Let the async fetch complete and navigation settle.
+            await tester.pumpAndSettle();
+          },
+          () => MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'questions': List.generate(
+                  5,
+                  (i) => {
+                    'id': 'q${i + 1}',
+                    'question': 'Question ${i + 1}',
+                    'options': ['Alpha', 'Bravo', 'Charlie', 'Delta'],
+                    'correctIndex': 0,
+                    'explanation': 'Because ${i + 1}.',
+                  },
+                ),
+              }),
+              200,
+              headers: {
+                'content-type': 'application/json; charset=utf-8',
+              },
+            ),
+          ),
+        );
+
+        expect(navigatedTo, '/game');
+        expect(find.text('route: /game'), findsOneWidget);
       },
     );
   });
