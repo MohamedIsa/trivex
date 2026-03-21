@@ -34,7 +34,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final controller = _timerController.controller;
     final remaining = controller != null
-        ? ((1.0 - controller.value) * 15).round()
+        ? ((1.0 - controller.value) * state.currentQuestion.timeLimit).round()
         : 0;
 
     _timerController.cancel();
@@ -68,7 +68,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   _TopBar(state: state),
 
                   // ── Timer bar ────────────────────────────────────────────
-                  GameTimer(timerController: _timerController),
+                  GameTimer(
+                    timerController: _timerController,
+                    duration: Duration(
+                      seconds: state.currentQuestion.timeLimit,
+                    ),
+                  ),
                   _TimerBar(timerController: _timerController),
 
                   // ── Question + Tiles (scrollable) ─────────────────────────

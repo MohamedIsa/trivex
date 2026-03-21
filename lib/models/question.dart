@@ -13,6 +13,7 @@ class Question with _$Question {
     required List<String> options, // always length 4
     required int correctIndex, // 0–3
     required String explanation,
+    required int timeLimit, // seconds, 10–30 (default 15)
   }) = _Question;
 
   factory Question.fromJson(Map<String, dynamic> json) {
@@ -23,6 +24,7 @@ class Question with _$Question {
       options: rawOptions.map((o) => o.toString()).toList(),
       correctIndex: json['correctIndex'] as int,
       explanation: json['explanation'] as String,
+      timeLimit: (json['timeLimit'] as int?) ?? 15,
     );
   }
 
@@ -32,5 +34,6 @@ class Question with _$Question {
         'options': options,
         'correctIndex': correctIndex,
         'explanation': explanation,
+        'timeLimit': timeLimit,
       };
 }

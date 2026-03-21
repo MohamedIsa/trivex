@@ -20,7 +20,7 @@ mixin _$GameState {
   String get topic => throw _privateConstructorUsedError;
   String get difficulty => throw _privateConstructorUsedError;
 
-  /// Index of the currently displayed question (0–9).
+  /// Index of the currently displayed question (0-based).
   int get currentIndex => throw _privateConstructorUsedError;
   int get playerScore => throw _privateConstructorUsedError;
   int get botScore => throw _privateConstructorUsedError;
@@ -31,7 +31,7 @@ mixin _$GameState {
   /// True while the answer reveal animation / panel is visible.
   bool get isRevealing => throw _privateConstructorUsedError;
 
-  /// True after the 10th question has been answered / timed out.
+  /// True after the last question has been answered / timed out.
   bool get isGameOver => throw _privateConstructorUsedError;
 
   /// Populated by [GameStateNotifier] when [isGameOver] becomes true.
@@ -264,7 +264,7 @@ class _$GameStateImpl extends _GameState {
   @override
   final String difficulty;
 
-  /// Index of the currently displayed question (0–9).
+  /// Index of the currently displayed question (0-based).
   @override
   final int currentIndex;
   @override
@@ -280,7 +280,7 @@ class _$GameStateImpl extends _GameState {
   @override
   final bool isRevealing;
 
-  /// True after the 10th question has been answered / timed out.
+  /// True after the last question has been answered / timed out.
   @override
   final bool isGameOver;
 
@@ -362,7 +362,7 @@ abstract class _GameState extends GameState {
   String get difficulty;
   @override
 
-  /// Index of the currently displayed question (0–9).
+  /// Index of the currently displayed question (0-based).
   int get currentIndex;
   @override
   int get playerScore;
@@ -378,7 +378,7 @@ abstract class _GameState extends GameState {
   bool get isRevealing;
   @override
 
-  /// True after the 10th question has been answered / timed out.
+  /// True after the last question has been answered / timed out.
   bool get isGameOver;
   @override
 

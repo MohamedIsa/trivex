@@ -63,8 +63,11 @@ class RevealBottomSheet extends HookConsumerWidget {
         context.pushReplacement('/result');
       } else {
         // Slide sheet down, then restart timer for the next question.
+        final nextTimeLimit = newState.currentQuestion.timeLimit;
         slideController.reverse().then((_) {
-          timerController.restart();
+          timerController.restart(
+            duration: Duration(seconds: nextTimeLimit),
+          );
         });
       }
     }

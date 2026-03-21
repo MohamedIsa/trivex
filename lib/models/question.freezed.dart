@@ -22,6 +22,7 @@ mixin _$Question {
       throw _privateConstructorUsedError; // always length 4
   int get correctIndex => throw _privateConstructorUsedError; // 0–3
   String get explanation => throw _privateConstructorUsedError;
+  int get timeLimit => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $QuestionCopyWith<Question> get copyWith =>
@@ -38,7 +39,8 @@ abstract class $QuestionCopyWith<$Res> {
       String question,
       List<String> options,
       int correctIndex,
-      String explanation});
+      String explanation,
+      int timeLimit});
 }
 
 /// @nodoc
@@ -59,6 +61,7 @@ class _$QuestionCopyWithImpl<$Res, $Val extends Question>
     Object? options = null,
     Object? correctIndex = null,
     Object? explanation = null,
+    Object? timeLimit = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -81,6 +84,10 @@ class _$QuestionCopyWithImpl<$Res, $Val extends Question>
           ? _value.explanation
           : explanation // ignore: cast_nullable_to_non_nullable
               as String,
+      timeLimit: null == timeLimit
+          ? _value.timeLimit
+          : timeLimit // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -98,7 +105,8 @@ abstract class _$$QuestionImplCopyWith<$Res>
       String question,
       List<String> options,
       int correctIndex,
-      String explanation});
+      String explanation,
+      int timeLimit});
 }
 
 /// @nodoc
@@ -117,6 +125,7 @@ class __$$QuestionImplCopyWithImpl<$Res>
     Object? options = null,
     Object? correctIndex = null,
     Object? explanation = null,
+    Object? timeLimit = null,
   }) {
     return _then(_$QuestionImpl(
       id: null == id
@@ -139,6 +148,10 @@ class __$$QuestionImplCopyWithImpl<$Res>
           ? _value.explanation
           : explanation // ignore: cast_nullable_to_non_nullable
               as String,
+      timeLimit: null == timeLimit
+          ? _value.timeLimit
+          : timeLimit // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -151,7 +164,8 @@ class _$QuestionImpl extends _Question {
       required this.question,
       required final List<String> options,
       required this.correctIndex,
-      required this.explanation})
+      required this.explanation,
+      required this.timeLimit})
       : _options = options,
         super._();
 
@@ -173,10 +187,12 @@ class _$QuestionImpl extends _Question {
 // 0–3
   @override
   final String explanation;
+  @override
+  final int timeLimit;
 
   @override
   String toString() {
-    return 'Question(id: $id, question: $question, options: $options, correctIndex: $correctIndex, explanation: $explanation)';
+    return 'Question(id: $id, question: $question, options: $options, correctIndex: $correctIndex, explanation: $explanation, timeLimit: $timeLimit)';
   }
 
   @override
@@ -191,12 +207,20 @@ class _$QuestionImpl extends _Question {
             (identical(other.correctIndex, correctIndex) ||
                 other.correctIndex == correctIndex) &&
             (identical(other.explanation, explanation) ||
-                other.explanation == explanation));
+                other.explanation == explanation) &&
+            (identical(other.timeLimit, timeLimit) ||
+                other.timeLimit == timeLimit));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, question,
-      const DeepCollectionEquality().hash(_options), correctIndex, explanation);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      question,
+      const DeepCollectionEquality().hash(_options),
+      correctIndex,
+      explanation,
+      timeLimit);
 
   @JsonKey(ignore: true)
   @override
@@ -211,7 +235,8 @@ abstract class _Question extends Question {
       required final String question,
       required final List<String> options,
       required final int correctIndex,
-      required final String explanation}) = _$QuestionImpl;
+      required final String explanation,
+      required final int timeLimit}) = _$QuestionImpl;
   const _Question._() : super._();
 
   @override
@@ -224,6 +249,8 @@ abstract class _Question extends Question {
   int get correctIndex;
   @override // 0–3
   String get explanation;
+  @override
+  int get timeLimit;
   @override
   @JsonKey(ignore: true)
   _$$QuestionImplCopyWith<_$QuestionImpl> get copyWith =>

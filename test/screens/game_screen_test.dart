@@ -22,6 +22,7 @@ Question _q(int i) => Question(
       options: ['Alpha', 'Bravo', 'Charlie', 'Delta'],
       correctIndex: 0,
       explanation: 'Because $i.',
+      timeLimit: 15,
     );
 
 /// Question with very long answer options (~80 chars each).
@@ -37,6 +38,7 @@ Question _longOptionQ() => Question(
       ],
       correctIndex: 0,
       explanation: 'Long option test.',
+      timeLimit: 15,
     );
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));

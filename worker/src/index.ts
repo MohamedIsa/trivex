@@ -14,6 +14,7 @@ interface Question {
   options: [string, string, string, string];
   correctIndex: 0 | 1 | 2 | 3;
   explanation: string;
+  timeLimit: number;
 }
 
 interface GenerateRequest {
@@ -98,7 +99,8 @@ function buildUserPrompt(topic: string, difficulty: 'easy' | 'medium' | 'hard', 
     '      "question": "...",\n' +
     '      "options": ["A", "B", "C", "D"],\n' +
     '      "correctIndex": 0,\n' +
-    '      "explanation": "..."\n' +
+    '      "explanation": "...",\n' +
+    '      "timeLimit": 15\n' +
     '    }\n' +
     '  ]\n' +
     '}\n' +
@@ -107,6 +109,7 @@ function buildUserPrompt(topic: string, difficulty: 'easy' | 'medium' | 'hard', 
     '- correctIndex must be an integer 0, 1, 2, or 3 pointing to the correct option\n' +
     '- explanation must be a non-empty string explaining why the answer is correct\n' +
     '- id must be a string ("1", "2", …)\n' +
+    '- timeLimit must be an integer between 10 and 30 representing how many seconds a player needs to answer this question fairly\n' +
     `- Generate exactly ${count} questions`
   );
 }
@@ -188,6 +191,13 @@ function isValidQuestion(q: unknown): q is Question {
   )
     return false;
   if (typeof obj['explanation'] !== 'string' || obj['explanation'].trim() === '') return false;
+
+  // timeLimit: default to 15 if missing or out of range (10–30)
+  const rawLimit = obj['timeLimit'];
+  if (typeof rawLimit !== 'number' || !Number.isInteger(rawLimit) || rawLimit < 10 || rawLimit > 30) {
+    (obj as Record<string, unknown>)['timeLimit'] = 15;
+  }
+
   return true;
 }
 

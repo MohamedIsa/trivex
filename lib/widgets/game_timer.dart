@@ -22,8 +22,11 @@ class GameTimerController {
   /// Stops the timer without calling [GameStateNotifier.timeExpired].
   void cancel() => controller?.stop();
 
-  /// Resets the countdown to 15 s and starts it running again.
-  void restart() {
+  /// Resets the countdown and starts it running again.
+  ///
+  /// If [duration] is provided the controller's duration is updated first.
+  void restart({Duration? duration}) {
+    if (duration != null) controller?.duration = duration;
     controller?.reset();
     controller?.forward();
   }
@@ -33,7 +36,7 @@ class GameTimerController {
 // Widget
 // ---------------------------------------------------------------------------
 
-/// A 15-second countdown that integrates with [gameStateNotifierProvider].
+/// A countdown timer that integrates with [gameStateNotifierProvider].
 ///
 /// - Uses [useAnimationController] internally — automatic disposal.
 /// - On completion, [GameStateNotifier.timeExpired] is called automatically.
@@ -41,14 +44,21 @@ class GameTimerController {
 ///   answer to prevent a spurious timeout.
 /// - Call [GameTimerController.restart] at the start of every new question.
 class GameTimer extends HookConsumerWidget {
-  const GameTimer({super.key, required this.timerController});
+  const GameTimer({
+    super.key,
+    required this.timerController,
+    this.duration = kTimerDuration,
+  });
 
   /// Shared controller object used by the game screen and reveal sheet.
   final GameTimerController timerController;
 
+  /// The countdown duration for the current question.
+  final Duration duration;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = useAnimationController(duration: kTimerDuration);
+    final controller = useAnimationController(duration: duration);
 
     // Wire up the shared controller handle and start the timer.
     useEffect(() {

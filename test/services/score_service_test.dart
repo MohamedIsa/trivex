@@ -41,5 +41,13 @@ void main() {
       // 11/15 * 50 = 36.667 → .round() = 37, .floor() would be 36
       expect(ScoreService.calculatePoints(true, 11.0), 137);
     });
+
+    test('correct at 15s with timeLimitSeconds: 30 → 125 pts', () {
+      // 100 + (15/30 * 50).round() = 100 + 25 = 125
+      expect(
+        ScoreService.calculatePoints(true, 15.0, timeLimitSeconds: 30),
+        125,
+      );
+    });
   });
 }

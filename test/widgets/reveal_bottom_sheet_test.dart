@@ -21,6 +21,7 @@ Question _q(int i) => Question(
       options: ['Alpha', 'Bravo', 'Charlie', 'Delta'],
       correctIndex: 0,
       explanation: 'Explanation for $i.',
+      timeLimit: 15,
     );
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));

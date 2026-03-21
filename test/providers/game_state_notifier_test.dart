@@ -20,6 +20,7 @@ Question _q(int i) => Question(
       options: ['A', 'B', 'C', 'D'],
       correctIndex: 0, // correct answer is always index 0
       explanation: 'Because $i.',
+      timeLimit: 15,
     );
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));

@@ -21,6 +21,7 @@ Map<String, dynamic> _buildQuestion(int index) => {
       'options': ['${index * 2}', '${index + 1}', '${index * 3}', '0'],
       'correctIndex': 0,
       'explanation': 'Because $index + $index = ${index * 2}.',
+      'timeLimit': 15,
     };
 
 String _buildFixture({int count = 10}) {

@@ -49,7 +49,7 @@ class GameStateNotifier extends _$GameStateNotifier {
   /// Records the player's answer, runs the bot, and transitions to revealing.
   ///
   /// [index] is the option the player tapped (0–3).
-  /// [timeLeft] is the remaining seconds (0–15) used for the speed bonus.
+  /// [timeLeft] is the remaining seconds used for the speed bonus.
   void selectAnswer(int index, {required int timeLeft}) {
     // Guard: ignore taps after the answer is already locked in.
     if (state.isRevealing || state.isGameOver) return;
@@ -57,8 +57,11 @@ class GameStateNotifier extends _$GameStateNotifier {
     final correct = state.currentQuestion.correctIndex;
     final playerCorrect = index == correct;
 
-    final playerPoints =
-        ScoreService.calculatePoints(playerCorrect, timeLeft.toDouble());
+    final playerPoints = ScoreService.calculatePoints(
+      playerCorrect,
+      timeLeft.toDouble(),
+      timeLimitSeconds: state.currentQuestion.timeLimit.toDouble(),
+    );
 
     final botCorrect = BotEngine.didBotAnswer(state.difficulty);
     final botPoints = botCorrect ? 100 : 0;
