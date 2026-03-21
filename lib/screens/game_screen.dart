@@ -55,7 +55,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     return PopScope(
-      canPop: false,
+      canPop: state.questions.isEmpty || state.isGameOver,
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(

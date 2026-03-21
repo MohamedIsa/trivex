@@ -85,7 +85,13 @@ class TopicScreen extends HookWidget {
                         Icons.arrow_back,
                         color: AppColors.foreground,
                       ),
-                      onPressed: () => context.pop(),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
                     ),
                   ),
 

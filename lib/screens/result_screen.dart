@@ -82,7 +82,7 @@ class ResultScreen extends HookConsumerWidget {
       if (navigating.value) return;
       navigating.value = true;
       final state = ref.read(gameStateNotifierProvider);
-      context.pushReplacement(
+      context.go(
         '/loading',
         extra: GameConfig(
           topic: state.topic,

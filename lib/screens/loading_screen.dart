@@ -97,7 +97,11 @@ class LoadingScreen extends HookConsumerWidget {
 
     void cancel() {
       cancelled.value = true;
-      context.pop();
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/home');
+      }
     }
 
     // ── Entry fade + deferred fetch ─────────────────────────────────────────
@@ -114,10 +118,18 @@ class LoadingScreen extends HookConsumerWidget {
 
     // ── Build ───────────────────────────────────────────────────────────────
 
+    final gameState = ref.watch(gameStateNotifierProvider);
+    final isGameActive =
+        gameState.questions.isNotEmpty && !gameState.isGameOver;
+
     return PopScope(
-      canPop: false,
+      canPop: !isGameActive,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) cancel();
+        if (didPop) {
+          cancelled.value = true;
+          return;
+        }
+        if (!isGameActive) cancel();
       },
       child: Scaffold(
         backgroundColor: AppColors.background,

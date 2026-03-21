@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:trivex/models/elo_record.dart';
+import 'package:trivex/models/game_config.dart';
 import 'package:trivex/models/game_state.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
@@ -340,5 +341,120 @@ void main() {
         expect(find.text('0'), findsOneWidget);
       },
     );
+
+    // ── Tap "New Topic" → go() clears stack, location is /topic ─────────
+
+    testWidgets(
+      'tap "New Topic" — go() clears stack, location is /topic',
+      (tester) async {
+        final router = await _pumpWithRouter(tester, state: _winState());
+
+        await tester.tap(find.text('New Topic'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // go('/topic') cleared the entire game stack.
+        expect(find.text('route: /topic'), findsOneWidget);
+
+        // No stale game routes remain — canPop is false (only /topic).
+        expect(router.canPop(), isFalse);
+      },
+    );
+
+    // ── Tap "Play Again" → /loading with correct GameConfig ───────────────
+
+    testWidgets(
+      'tap "Play Again" — location is /loading with correct GameConfig extra',
+      (tester) async {
+        Object? capturedExtra;
+
+        await _pumpWithRouter(
+          tester,
+          state: _winState(),
+          onLoadingExtra: (extra) => capturedExtra = extra,
+        );
+
+        await tester.tap(find.text('Play Again'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // Location is /loading.
+        expect(find.text('route: /loading'), findsOneWidget);
+
+        // GameConfig extra matches the game state.
+        expect(capturedExtra, isA<GameConfig>());
+        final config = capturedExtra! as GameConfig;
+        expect(config.topic, 'Test');
+        expect(config.difficulty, 'medium');
+        expect(config.count, 10);
+      },
+    );
   });
+}
+
+// ---------------------------------------------------------------------------
+// _pumpWithRouter — returns GoRouter for stack-depth assertions
+// ---------------------------------------------------------------------------
+
+Future<GoRouter> _pumpWithRouter(
+  WidgetTester tester, {
+  required GameState state,
+  void Function(Object? extra)? onLoadingExtra,
+}) async {
+  tester.view.physicalSize = const Size(1080, 1920);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  final fakeRepo = _FakeEloRepository();
+
+  final container = ProviderContainer(
+    overrides: [
+      eloRepositoryProvider.overrideWithValue(fakeRepo),
+      gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
+      eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  final router = GoRouter(
+    initialLocation: '/result',
+    routes: [
+      GoRoute(
+        path: '/result',
+        builder: (_, _) => const ResultScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (_, _) => const Scaffold(body: Text('route: /home')),
+      ),
+      GoRoute(
+        path: '/topic',
+        builder: (_, _) => const Scaffold(body: Text('route: /topic')),
+      ),
+      GoRoute(
+        path: '/loading',
+        builder: (_, routeState) {
+          onLoadingExtra?.call(routeState.extra);
+          return const Scaffold(body: Text('route: /loading'));
+        },
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+
+  // Walk past the 6 staggered entry animations.
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+
+  return router;
 }
