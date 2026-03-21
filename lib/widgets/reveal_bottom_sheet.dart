@@ -50,26 +50,36 @@ class RevealBottomSheet extends HookConsumerWidget {
       return null;
     }, const []);
 
-    // ── Next / Results tap ──────────────────────────────────────────────────
+    // ── Advance game after close animation completes ────────────────────────
+
+    useEffect(() {
+      void onStatus(AnimationStatus status) {
+        if (status != AnimationStatus.dismissed) return;
+        if (!context.mounted) return;
+
+        final currentState = ref.read(gameStateNotifierProvider);
+        if (!currentState.isRevealing) return; // already advanced
+
+        ref.read(gameStateNotifierProvider.notifier).nextQuestion();
+
+        final newState = ref.read(gameStateNotifierProvider);
+        if (newState.isGameOver) {
+          if (context.mounted) context.pushReplacement('/result');
+        } else {
+          timerController.restart(
+            duration: Duration(
+              seconds: newState.currentQuestion.timeLimit,
+            ),
+          );
+        }
+      }
+
+      slideController.addStatusListener(onStatus);
+      return () => slideController.removeStatusListener(onStatus);
+    }, [slideController]);
 
     void onNextTap() {
-      final notifier = ref.read(gameStateNotifierProvider.notifier);
-
-      notifier.nextQuestion();
-
-      final newState = ref.read(gameStateNotifierProvider);
-
-      if (newState.isGameOver) {
-        context.pushReplacement('/result');
-      } else {
-        // Slide sheet down, then restart timer for the next question.
-        final nextTimeLimit = newState.currentQuestion.timeLimit;
-        slideController.reverse().then((_) {
-          timerController.restart(
-            duration: Duration(seconds: nextTimeLimit),
-          );
-        });
-      }
+      slideController.reverse();
     }
 
     // ── Build ───────────────────────────────────────────────────────────────

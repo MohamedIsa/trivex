@@ -285,6 +285,64 @@ void main() {
       },
     );
 
+    // ── BUG-010: close-animation heading tests ─────────────────────────────
+
+    testWidgets(
+      'tap "Next →" after correct — "Correct!" during close, no "Time\'s Up!"',
+      (tester) async {
+        await _pumpRevealing(
+          tester,
+          desiredState: _correctRevealState(currentIndex: 0),
+        );
+
+        expect(find.text('Correct!'), findsOneWidget);
+
+        await tester.tap(find.text('Next →'));
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('Correct!'), findsOneWidget);
+        expect(find.text("Time's Up!"), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'tap "Next →" after wrong — "Wrong!" during close, no "Time\'s Up!"',
+      (tester) async {
+        await _pumpRevealing(
+          tester,
+          desiredState: _wrongRevealState(currentIndex: 0),
+        );
+
+        expect(find.text('Wrong!'), findsOneWidget);
+
+        await tester.tap(find.text('Next →'));
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('Wrong!'), findsOneWidget);
+        expect(find.text("Time's Up!"), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'tap "Next →" — after close completes, sheet hidden and game advanced',
+      (tester) async {
+        final container = await _pumpRevealing(
+          tester,
+          desiredState: _correctRevealState(currentIndex: 0),
+        );
+
+        await tester.tap(find.text('Next →'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+
+        expect(find.text('Correct!'), findsNothing);
+
+        final state = container.read(gameStateNotifierProvider);
+        expect(state.currentIndex, 1);
+        expect(state.isRevealing, isFalse);
+      },
+    );
+
     // ── BUG-009: first-frame heading tests ────────────────────────────────
 
     testWidgets(
