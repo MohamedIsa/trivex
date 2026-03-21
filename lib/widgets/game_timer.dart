@@ -33,7 +33,7 @@ class GameTimerController {
 // Widget
 // ---------------------------------------------------------------------------
 
-/// A 15-second countdown that integrates with [gameStateProvider].
+/// A 15-second countdown that integrates with [gameStateNotifierProvider].
 ///
 /// - Uses [useAnimationController] internally — automatic disposal.
 /// - On completion, [GameStateNotifier.timeExpired] is called automatically.
@@ -56,7 +56,7 @@ class GameTimer extends HookConsumerWidget {
 
       void onStatus(AnimationStatus status) {
         if (status == AnimationStatus.completed) {
-          ref.read(gameStateProvider.notifier).timeExpired();
+          ref.read(gameStateNotifierProvider.notifier).timeExpired();
         }
       }
 

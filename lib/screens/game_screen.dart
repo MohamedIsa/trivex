@@ -39,7 +39,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     _timerController.cancel();
     ref
-        .read(gameStateProvider.notifier)
+        .read(gameStateNotifierProvider.notifier)
         .selectAnswer(index, timeLeft: remaining);
   }
 
@@ -47,7 +47,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(gameStateProvider);
+    final state = ref.watch(gameStateNotifierProvider);
 
     // Guard: if questions haven't been loaded yet, show nothing.
     if (state.questions.isEmpty) {

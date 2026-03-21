@@ -41,7 +41,7 @@ class RevealBottomSheet extends HookConsumerWidget {
 
     // Sync sheet on first build if already revealing.
     useEffect(() {
-      final isRevealing = ref.read(gameStateProvider).isRevealing;
+      final isRevealing = ref.read(gameStateNotifierProvider).isRevealing;
       if (isRevealing &&
           !slideController.isAnimating &&
           slideController.value == 0) {
@@ -53,11 +53,11 @@ class RevealBottomSheet extends HookConsumerWidget {
     // ── Next / Results tap ──────────────────────────────────────────────────
 
     void onNextTap() {
-      final notifier = ref.read(gameStateProvider.notifier);
+      final notifier = ref.read(gameStateNotifierProvider.notifier);
 
       notifier.nextQuestion();
 
-      final newState = ref.read(gameStateProvider);
+      final newState = ref.read(gameStateNotifierProvider);
 
       if (newState.isGameOver) {
         context.pushReplacement('/result');
@@ -71,10 +71,10 @@ class RevealBottomSheet extends HookConsumerWidget {
 
     // ── Build ───────────────────────────────────────────────────────────────
 
-    final state = ref.watch(gameStateProvider);
+    final state = ref.watch(gameStateNotifierProvider);
 
     // Drive slide in/out reactively via ref.listen (not a side effect in build).
-    ref.listen<GameState>(gameStateProvider, (previous, next) {
+    ref.listen<GameState>(gameStateNotifierProvider, (previous, next) {
       if (next.isRevealing &&
           slideController.status == AnimationStatus.dismissed) {
         slideController.forward();

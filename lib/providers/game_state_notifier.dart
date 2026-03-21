@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/game_state.dart';
 import '../models/question.dart';
@@ -7,15 +7,20 @@ import '../services/bot_engine.dart';
 import '../services/elo_service.dart';
 import '../services/score_service.dart';
 
+part 'game_state_notifier.g.dart';
+
 /// Central game-state manager.
 ///
 /// Consumed by the Game screen (UI-004) and Reveal screen (UI-005).
 /// The timer (GAME-003) drives [timeExpired].
 /// ELO calculation (ELO-001) reads [state] after [isGameOver] becomes true.
-class GameStateNotifier extends StateNotifier<GameState> {
-  GameStateNotifier(this._eloRepository) : super(GameState.empty);
+@Riverpod(keepAlive: true)
+class GameStateNotifier extends _$GameStateNotifier {
+  @override
+  GameState build() => GameState.empty;
 
-  final EloRepository _eloRepository;
+  /// Access the ELO repository via the provider graph.
+  EloRepository get _eloRepository => ref.read(eloRepositoryProvider);
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -102,10 +107,3 @@ class GameStateNotifier extends StateNotifier<GameState> {
     );
   }
 }
-
-/// The single game-state provider consumed by all game UI widgets.
-final gameStateProvider =
-    StateNotifierProvider<GameStateNotifier, GameState>((ref) {
-  final eloRepo = ref.watch(eloRepositoryProvider);
-  return GameStateNotifier(eloRepo);
-});

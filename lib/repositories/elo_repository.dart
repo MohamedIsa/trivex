@@ -1,8 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/elo_record.dart';
 import '../services/elo_service.dart';
+
+part 'elo_repository.g.dart';
 
 /// Persists ELO history via a Hive box named `'elo_history'`.
 ///
@@ -43,6 +45,7 @@ class EloRepository {
 }
 
 /// Riverpod provider for [EloRepository].
-final eloRepositoryProvider = Provider<EloRepository>((ref) {
+@Riverpod(keepAlive: true)
+EloRepository eloRepository(EloRepositoryRef ref) {
   return EloRepository();
-});
+}

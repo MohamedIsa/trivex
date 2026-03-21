@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:trivex/models/elo_record.dart';
@@ -20,9 +21,12 @@ Question _q(int i) => Question(
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
-late EloRepository _eloRepo;
+ProviderContainer? _container;
 
-GameStateNotifier _notifier() => GameStateNotifier(_eloRepo);
+GameStateNotifier _notifier() {
+  _container = ProviderContainer();
+  return _container!.read(gameStateNotifierProvider.notifier);
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -33,7 +37,6 @@ void main() {
     Hive.init('/tmp/hive_test_game_state');
     Hive.registerAdapter(EloRecordAdapter());
     await Hive.openBox<EloRecord>(EloRepository.boxName);
-    _eloRepo = EloRepository();
   });
 
   tearDownAll(() async {
@@ -43,6 +46,11 @@ void main() {
   setUp(() async {
     final box = Hive.box<EloRecord>(EloRepository.boxName);
     await box.clear();
+  });
+
+  tearDown(() {
+    _container?.dispose();
+    _container = null;
   });
   // ── GameState immutability / copyWith ─────────────────────────────────────
 

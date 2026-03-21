@@ -78,7 +78,7 @@ class LoadingScreen extends HookConsumerWidget {
 
         // Initialise game state before navigating.
         ref
-            .read(gameStateProvider.notifier)
+            .read(gameStateNotifierProvider.notifier)
             .initGame(
               questions,
               topic: config.topic,

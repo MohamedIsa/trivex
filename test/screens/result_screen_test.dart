@@ -39,8 +39,11 @@ class _FakeEloRepository extends EloRepository {
 /// Exposes the protected `state` setter so we can seed an exact [GameState]
 /// without playing through 10 questions.
 class _SeedableNotifier extends GameStateNotifier {
-  _SeedableNotifier(super.repo);
-  void seed(GameState s) => state = s;
+  _SeedableNotifier(this._seedState);
+  final GameState _seedState;
+
+  @override
+  GameState build() => _seedState;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,11 +115,7 @@ Future<ProviderContainer> _pumpResultScreen(
   final container = ProviderContainer(
     overrides: [
       eloRepositoryProvider.overrideWithValue(fakeRepo),
-      gameStateProvider.overrideWith((ref) {
-        final notifier = _SeedableNotifier(fakeRepo);
-        notifier.seed(state);
-        return notifier;
-      }),
+      gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
       eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
     ],
   );

@@ -50,15 +50,12 @@ Future<ProviderContainer> _pumpWithState(
 ) async {
   final container = ProviderContainer(
     overrides: [
-      gameStateProvider.overrideWith((ref) {
-        final notifier = GameStateNotifier(EloRepository());
-        return notifier;
-      }),
+      gameStateNotifierProvider.overrideWith(GameStateNotifier.new),
     ],
   );
 
   // Seed the notifier's state.
-  final notifier = container.read(gameStateProvider.notifier);
+  final notifier = container.read(gameStateNotifierProvider.notifier);
   notifier.initGame(
     state.questions,
     topic: state.topic,
@@ -153,7 +150,7 @@ void main() {
         await tester.tap(find.text('Alpha'));
         await tester.pump();
 
-        final state = container.read(gameStateProvider);
+        final state = container.read(gameStateNotifierProvider);
         expect(state.selectedIndex, 0);
         expect(state.isRevealing, isTrue);
       },
@@ -173,7 +170,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 600));
 
         // Verify the state IS revealing.
-        final state = container.read(gameStateProvider);
+        final state = container.read(gameStateNotifierProvider);
         expect(state.isRevealing, isTrue);
 
         // The IgnorePointer wrapping the ListView should have ignoring=true.
@@ -204,7 +201,7 @@ void main() {
         await tester.tap(find.text('Alpha'));
         await tester.pump();
 
-        final state = container.read(gameStateProvider);
+        final state = container.read(gameStateNotifierProvider);
         expect(state.playerScore, greaterThan(0));
 
         // The score text should update.

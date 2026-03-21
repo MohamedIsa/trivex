@@ -77,13 +77,11 @@ Future<ProviderContainer> _pumpRevealing(
 }) async {
   final container = ProviderContainer(
     overrides: [
-      gameStateProvider.overrideWith((ref) {
-        return GameStateNotifier(EloRepository());
-      }),
+      gameStateNotifierProvider.overrideWith(GameStateNotifier.new),
     ],
   );
 
-  final notifier = container.read(gameStateProvider.notifier);
+  final notifier = container.read(gameStateNotifierProvider.notifier);
   notifier.initGame(
     desiredState.questions,
     topic: desiredState.topic,
@@ -217,7 +215,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 600));
 
-        final state = container.read(gameStateProvider);
+        final state = container.read(gameStateNotifierProvider);
         // After nextQuestion, currentIndex should advance.
         expect(state.currentIndex, 1);
         expect(state.isRevealing, isFalse);

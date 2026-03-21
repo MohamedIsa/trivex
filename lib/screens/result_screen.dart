@@ -64,7 +64,7 @@ class ResultScreen extends HookConsumerWidget {
       final eloRepo = ref.read(eloRepositoryProvider);
       previousElo.value = eloRepo.getCurrentRating();
 
-      final state = ref.read(gameStateProvider);
+      final state = ref.read(gameStateNotifierProvider);
       final eloResult = state.eloResult;
       if (eloResult != null) {
         eloRepo.saveResult(eloResult).then((_) {
@@ -81,7 +81,7 @@ class ResultScreen extends HookConsumerWidget {
     void playAgain() {
       if (navigating.value) return;
       navigating.value = true;
-      final state = ref.read(gameStateProvider);
+      final state = ref.read(gameStateNotifierProvider);
       context.pushReplacement(
         '/loading',
         extra: GameConfig(topic: state.topic, difficulty: state.difficulty),
@@ -102,7 +102,7 @@ class ResultScreen extends HookConsumerWidget {
 
     // ── Build ───────────────────────────────────────────────────────────────
 
-    final state = ref.watch(gameStateProvider);
+    final state = ref.watch(gameStateNotifierProvider);
 
     final playerScore = state.playerScore;
     final botScore = state.botScore;
