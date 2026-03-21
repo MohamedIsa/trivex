@@ -93,6 +93,22 @@ GameState _loseState() {
   );
 }
 
+GameState _highScoreState() {
+  final elo = EloService.calculate(1000, true);
+  return GameState(
+    questions: _tenQuestions(),
+    topic: 'Test',
+    difficulty: 'medium',
+    currentIndex: 9,
+    playerScore: 1450,
+    botScore: 0,
+    selectedIndex: 0,
+    isRevealing: false,
+    isGameOver: true,
+    eloResult: elo,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -270,6 +286,58 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         expect(pushedRoute, '/home');
+      },
+    );
+
+    // ── High score (1450 vs 0) on 360dp screen — no overflow ──────────────
+
+    testWidgets(
+      'score 1450 vs 0 on 360dp screen — no RenderFlex overflow',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final fakeRepo = _FakeEloRepository();
+        final state = _highScoreState();
+
+        final container = ProviderContainer(
+          overrides: [
+            eloRepositoryProvider.overrideWithValue(fakeRepo),
+            gameStateNotifierProvider
+                .overrideWith(() => _SeedableNotifier(state)),
+            eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = GoRouter(
+          initialLocation: '/result',
+          routes: [
+            GoRoute(
+              path: '/result',
+              builder: (_, _) => const ResultScreen(),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+
+        for (var i = 0; i < 6; i++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+
+        // No RenderFlex overflow — test passes if no exceptions were thrown.
+        expect(find.text('1450'), findsOneWidget);
+        expect(find.text('0'), findsOneWidget);
       },
     );
   });

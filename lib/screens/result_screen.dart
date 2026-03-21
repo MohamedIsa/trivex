@@ -140,9 +140,14 @@ class ResultScreen extends HookConsumerWidget {
               horizontal: kScreenPaddingH,
               vertical: 32,
             ),
-            child: Column(
-              children: [
-                const Spacer(),
+            child: CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Spacer(),
 
                 // 0 — Heading
                 staggerWrap(
@@ -261,6 +266,9 @@ class ResultScreen extends HookConsumerWidget {
                 ),
               ],
             ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -296,26 +304,31 @@ class _ScoreCard extends StatelessWidget {
         : Colors.transparent;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(kCardPadding),
       decoration: BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(kCardRadius),
         border: Border.all(color: borderColor, width: 2),
         boxShadow: isWinner && !isTie ? [AppShadows.primaryGlowStrong] : null,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
             style: const TextStyle(color: AppColors.muted, fontSize: 14),
           ),
           const SizedBox(height: 8),
-          Text(
-            '$score',
-            style: const TextStyle(
-              color: AppColors.foreground,
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '$score',
+              style: const TextStyle(
+                color: AppColors.foreground,
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -363,9 +376,11 @@ class _EloRow extends StatelessWidget {
         color: AppColors.card,
         borderRadius: BorderRadius.all(Radius.circular(kCardRadius)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
           // Previous ELO
           Text(
             '$previousElo',
@@ -419,6 +434,7 @@ class _EloRow extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
