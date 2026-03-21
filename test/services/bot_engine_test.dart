@@ -23,9 +23,9 @@ void main() {
       return correct;
     }
 
-    test("easy: correct rate is within 5 % of 85 %", () {
+    test("easy: correct rate is within 5 % of 40 %", () {
       final rate = countCorrect('easy') / trials;
-      expect(rate, closeTo(0.85, tolerance));
+      expect(rate, closeTo(0.40, tolerance));
     });
 
     test("medium: correct rate is within 5 % of 65 %", () {
@@ -33,14 +33,14 @@ void main() {
       expect(rate, closeTo(0.65, tolerance));
     });
 
-    test("hard: correct rate is within 5 % of 40 %", () {
+    test("hard: correct rate is within 5 % of 85 %", () {
       final rate = countCorrect('hard') / trials;
-      expect(rate, closeTo(0.40, tolerance));
+      expect(rate, closeTo(0.85, tolerance));
     });
 
-    test("unknown difficulty falls back to hard rate (within 5 % of 40 %)", () {
+    test("unknown difficulty falls back to hard rate (within 5 % of 85 %)", () {
       final rate = countCorrect('extreme') / trials;
-      expect(rate, closeTo(0.40, tolerance));
+      expect(rate, closeTo(0.85, tolerance));
     });
   });
 

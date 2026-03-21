@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -6,6 +8,7 @@ import 'package:trivex/models/game_state.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
 import 'package:trivex/repositories/elo_repository.dart';
+import 'package:trivex/services/bot_engine.dart';
 
 // ---------------------------------------------------------------------------
 // Fixture helpers
@@ -250,4 +253,63 @@ void main() {
       expect(notifier.state.playerScore, 123);
     });
   });
+
+  // ── Bot scoring (BUG-001) ─────────────────────────────────────────────────
+
+  group('bot scoring independence', () {
+    setUp(() {
+      // Force the bot to always answer correctly (nextDouble returns 0.0).
+      BotEngine.debugRandom = _FixedRandom(0.0);
+    });
+
+    tearDown(() {
+      BotEngine.debugRandom = null; // restore default RNG
+    });
+
+    test('player answers wrong → bot still scores', () {
+      final notifier = _notifier();
+      notifier.initGame(_tenQuestions(), difficulty: 'medium');
+      notifier.selectAnswer(3, timeLeft: 10); // wrong — correctIndex is 0
+
+      expect(notifier.state.playerScore, 0, reason: 'player was wrong');
+      expect(notifier.state.botScore, 100, reason: 'bot scored independently');
+    });
+
+    test('player times out → bot still scores', () {
+      final notifier = _notifier();
+      notifier.initGame(_tenQuestions(), difficulty: 'medium');
+      notifier.timeExpired();
+
+      expect(notifier.state.playerScore, 0, reason: 'timeout gives 0 pts');
+      expect(notifier.state.botScore, 100, reason: 'bot scored independently');
+    });
+
+    test('player correct AND bot correct → both scores increment', () {
+      final notifier = _notifier();
+      notifier.initGame(_tenQuestions(), difficulty: 'medium');
+      notifier.selectAnswer(0, timeLeft: 15); // correct
+
+      expect(notifier.state.playerScore, 150, reason: '100 base + 50 bonus');
+      expect(notifier.state.botScore, 100, reason: 'bot also scored');
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test doubles
+// ---------------------------------------------------------------------------
+
+/// A [Random] that always returns [_fixedValue] from [nextDouble].
+class _FixedRandom implements Random {
+  _FixedRandom(this._fixedValue);
+  final double _fixedValue;
+
+  @override
+  double nextDouble() => _fixedValue;
+
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  bool nextBool() => true;
 }
