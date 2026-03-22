@@ -166,7 +166,17 @@ async function callWorkersAI(
     throw new LLMError('Empty or unexpected response from Workers AI', 502);
   }
 
-  const parsed = JSON.parse(content) as { questions: Question[] };
+  // Attempt direct JSON.parse; fall back to stripping markdown fences
+  let parsed: { questions: Question[] };
+  try {
+    parsed = JSON.parse(content) as { questions: Question[] };
+  } catch {
+    const cleaned = content
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/, '')
+      .trim();
+    parsed = JSON.parse(cleaned) as { questions: Question[] };
+  }
   return parsed.questions;
 }
 

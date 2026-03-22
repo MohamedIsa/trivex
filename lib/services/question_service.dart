@@ -41,7 +41,7 @@ class QuestionService {
             headers: {'Content-Type': 'application/json'},
             body: body,
           )
-          .timeout(const Duration(seconds: 20));
+          .timeout(kFetchTimeout);
     } on TimeoutException {
       rethrow;
     }
