@@ -96,16 +96,18 @@ function buildUserPrompt(topic: string, difficulty: 'easy' | 'medium' | 'hard', 
     '  "questions": [\n' +
     '    {\n' +
     '      "id": "1",\n' +
-    '      "question": "...",\n' +
-    '      "options": ["A", "B", "C", "D"],\n' +
+    '      "question": "What is the capital of France?",\n' +
+    '      "options": ["Paris", "London", "Berlin", "Madrid"],\n' +
     '      "correctIndex": 0,\n' +
-    '      "explanation": "...",\n' +
+    '      "explanation": "Paris has been the capital of France since the 10th century.",\n' +
     '      "timeLimit": 15\n' +
     '    }\n' +
     '  ]\n' +
     '}\n' +
     'Rules:\n' +
-    '- options must be an array of exactly 4 non-empty strings\n' +
+    '- Each option must be a complete, meaningful answer — never a single letter, never "A", "B", "C", or "D"\n' +
+    '- WRONG: "options": ["A", "B", "C", "D"] — RIGHT: "options": ["Paris", "London", "Berlin", "Madrid"]\n' +
+    '- options must be an array of exactly 4 non-empty strings containing full answer text\n' +
     '- correctIndex must be an integer 0, 1, 2, or 3 pointing to the correct option\n' +
     '- explanation must be a non-empty string explaining why the answer is correct\n' +
     '- id must be a string ("1", "2", …)\n' +
@@ -181,6 +183,13 @@ function isValidQuestion(q: unknown): q is Question {
     !Array.isArray(obj['options']) ||
     obj['options'].length !== 4 ||
     !(obj['options'] as unknown[]).every((o) => typeof o === 'string' && (o as string).trim() !== '')
+  )
+    return false;
+
+  // Reject single-character options or bare A/B/C/D labels (BUG-011)
+  const labelPattern = /^[A-D]\.?$/;
+  if (
+    (obj['options'] as string[]).some((o) => o.trim().length <= 1 || labelPattern.test(o.trim()))
   )
     return false;
   if (
