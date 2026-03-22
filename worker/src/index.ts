@@ -327,7 +327,7 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
       .slice(0, 50);
 
     // ── Call Workers AI with 30s timeout ─────────────────────────────────
-    const model = env.LLM_MODEL ?? '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+    const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct-fast';
     const timeoutError = new LLMError('LLM API timeout', 504);
     const questions = await withTimeout(
       callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount, language, excludeQuestions),

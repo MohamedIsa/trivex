@@ -3,7 +3,7 @@ const String kWorkerBaseUrl = 'https://trivex-worker.trivex.workers.dev';
 
 /// HTTP timeout for the question-fetch request.
 ///
-/// The 70B model (`llama-3.3-70b-instruct-fp8-fast`) typically responds
-/// in 13–20 s from the Worker, with the Worker-side timeout at 30 s.
-/// 45 s gives comfortable headroom for mobile network latency.
+/// The `llama-3.1-8b-instruct-fast` model typically responds in 2-3 s.
+/// The Worker-side LLM timeout is 30 s; 45 s here gives comfortable
+/// headroom for network latency.
 const Duration kFetchTimeout = Duration(seconds: 45);
