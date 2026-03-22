@@ -168,4 +168,60 @@ void main() {
 
     expect(bodyJson['count'], 5);
   });
+
+  // ── language field ──────────────────────────────────────────────────────
+
+  test('GameConfig(language: "ar") — request body contains "language": "ar"',
+      () async {
+    const configAr = GameConfig(
+      topic: 'تاريخ',
+      difficulty: 'easy',
+      count: 3,
+      language: 'ar',
+    );
+
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer(
+      (_) async => http.Response(_buildFixture(count: 3), 200),
+    );
+
+    await service.fetchQuestions(configAr);
+
+    final captured = verify(mockClient.post(
+      any,
+      headers: captureAnyNamed('headers'),
+      body: captureAnyNamed('body'),
+    )).captured;
+
+    final bodyStr = captured[1] as String;
+    final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+    expect(bodyJson['language'], 'ar');
+    expect(bodyJson['topic'], 'تاريخ');
+  });
+
+  test('default GameConfig — request body contains "language": "en"',
+      () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
+
+    await service.fetchQuestions(config);
+
+    final captured = verify(mockClient.post(
+      any,
+      headers: captureAnyNamed('headers'),
+      body: captureAnyNamed('body'),
+    )).captured;
+
+    final bodyStr = captured[1] as String;
+    final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+    expect(bodyJson['language'], 'en');
+  });
 }

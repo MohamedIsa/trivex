@@ -30,6 +30,7 @@ class QuestionService {
       'topic': config.topic,
       'difficulty': config.difficulty,
       'count': config.count,
+      'language': config.language,
     });
 
     late http.Response response;

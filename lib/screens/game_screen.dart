@@ -54,9 +54,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       return const Scaffold(backgroundColor: AppColors.background);
     }
 
+    final textDirection = state.language == 'ar'
+        ? TextDirection.rtl
+        : TextDirection.ltr;
+
     return PopScope(
       canPop: state.questions.isEmpty || state.isGameOver,
-      child: Scaffold(
+      child: Directionality(
+        textDirection: textDirection,
+        child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
           child: Stack(
@@ -116,6 +122,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

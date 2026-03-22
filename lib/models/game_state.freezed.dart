@@ -20,6 +20,9 @@ mixin _$GameState {
   String get topic => throw _privateConstructorUsedError;
   String get difficulty => throw _privateConstructorUsedError;
 
+  /// Language code for the current round: 'en' or 'ar'.
+  String get language => throw _privateConstructorUsedError;
+
   /// Index of the currently displayed question (0-based).
   int get currentIndex => throw _privateConstructorUsedError;
   int get playerScore => throw _privateConstructorUsedError;
@@ -51,6 +54,7 @@ abstract class $GameStateCopyWith<$Res> {
       {List<Question> questions,
       String topic,
       String difficulty,
+      String language,
       int currentIndex,
       int playerScore,
       int botScore,
@@ -78,6 +82,7 @@ class _$GameStateCopyWithImpl<$Res, $Val extends GameState>
     Object? questions = null,
     Object? topic = null,
     Object? difficulty = null,
+    Object? language = null,
     Object? currentIndex = null,
     Object? playerScore = null,
     Object? botScore = null,
@@ -98,6 +103,10 @@ class _$GameStateCopyWithImpl<$Res, $Val extends GameState>
       difficulty: null == difficulty
           ? _value.difficulty
           : difficulty // ignore: cast_nullable_to_non_nullable
+              as String,
+      language: null == language
+          ? _value.language
+          : language // ignore: cast_nullable_to_non_nullable
               as String,
       currentIndex: null == currentIndex
           ? _value.currentIndex
@@ -155,6 +164,7 @@ abstract class _$$GameStateImplCopyWith<$Res>
       {List<Question> questions,
       String topic,
       String difficulty,
+      String language,
       int currentIndex,
       int playerScore,
       int botScore,
@@ -181,6 +191,7 @@ class __$$GameStateImplCopyWithImpl<$Res>
     Object? questions = null,
     Object? topic = null,
     Object? difficulty = null,
+    Object? language = null,
     Object? currentIndex = null,
     Object? playerScore = null,
     Object? botScore = null,
@@ -201,6 +212,10 @@ class __$$GameStateImplCopyWithImpl<$Res>
       difficulty: null == difficulty
           ? _value.difficulty
           : difficulty // ignore: cast_nullable_to_non_nullable
+              as String,
+      language: null == language
+          ? _value.language
+          : language // ignore: cast_nullable_to_non_nullable
               as String,
       currentIndex: null == currentIndex
           ? _value.currentIndex
@@ -241,6 +256,7 @@ class _$GameStateImpl extends _GameState {
       {required final List<Question> questions,
       required this.topic,
       required this.difficulty,
+      this.language = 'en',
       required this.currentIndex,
       required this.playerScore,
       required this.botScore,
@@ -263,6 +279,11 @@ class _$GameStateImpl extends _GameState {
   final String topic;
   @override
   final String difficulty;
+
+  /// Language code for the current round: 'en' or 'ar'.
+  @override
+  @JsonKey()
+  final String language;
 
   /// Index of the currently displayed question (0-based).
   @override
@@ -290,7 +311,7 @@ class _$GameStateImpl extends _GameState {
 
   @override
   String toString() {
-    return 'GameState(questions: $questions, topic: $topic, difficulty: $difficulty, currentIndex: $currentIndex, playerScore: $playerScore, botScore: $botScore, selectedIndex: $selectedIndex, isRevealing: $isRevealing, isGameOver: $isGameOver, eloResult: $eloResult)';
+    return 'GameState(questions: $questions, topic: $topic, difficulty: $difficulty, language: $language, currentIndex: $currentIndex, playerScore: $playerScore, botScore: $botScore, selectedIndex: $selectedIndex, isRevealing: $isRevealing, isGameOver: $isGameOver, eloResult: $eloResult)';
   }
 
   @override
@@ -303,6 +324,8 @@ class _$GameStateImpl extends _GameState {
             (identical(other.topic, topic) || other.topic == topic) &&
             (identical(other.difficulty, difficulty) ||
                 other.difficulty == difficulty) &&
+            (identical(other.language, language) ||
+                other.language == language) &&
             (identical(other.currentIndex, currentIndex) ||
                 other.currentIndex == currentIndex) &&
             (identical(other.playerScore, playerScore) ||
@@ -325,6 +348,7 @@ class _$GameStateImpl extends _GameState {
       const DeepCollectionEquality().hash(_questions),
       topic,
       difficulty,
+      language,
       currentIndex,
       playerScore,
       botScore,
@@ -345,6 +369,7 @@ abstract class _GameState extends GameState {
       {required final List<Question> questions,
       required final String topic,
       required final String difficulty,
+      final String language,
       required final int currentIndex,
       required final int playerScore,
       required final int botScore,
@@ -360,6 +385,10 @@ abstract class _GameState extends GameState {
   String get topic;
   @override
   String get difficulty;
+  @override
+
+  /// Language code for the current round: 'en' or 'ar'.
+  String get language;
   @override
 
   /// Index of the currently displayed question (0-based).

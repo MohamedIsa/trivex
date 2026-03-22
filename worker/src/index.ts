@@ -21,6 +21,7 @@ interface GenerateRequest {
   topic: string;
   difficulty: 'easy' | 'medium' | 'hard';
   count: number;
+  language?: 'en' | 'ar';
 }
 
 interface GenerateResponse {
@@ -82,15 +83,32 @@ function difficultyWording(difficulty: 'easy' | 'medium' | 'hard'): string {
 // Prompt builders
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT =
-  'You are a trivia question generator. ' +
-  'You MUST return ONLY a raw JSON object — absolutely no markdown code fences, no backticks, no prose, no commentary. ' +
-  'Your entire response must be valid JSON that can be passed directly to JSON.parse().';
+function buildSystemPrompt(language: 'en' | 'ar'): string {
+  const base =
+    'You are a trivia question generator. ' +
+    'You MUST return ONLY a raw JSON object — absolutely no markdown code fences, no backticks, no prose, no commentary. ' +
+    'Your entire response must be valid JSON that can be passed directly to JSON.parse().';
 
-function buildUserPrompt(topic: string, difficulty: 'easy' | 'medium' | 'hard', count: number): string {
+  if (language === 'ar') {
+    return (
+      base +
+      ' Generate the question text, all 4 options, and the explanation entirely in Modern Standard Arabic (فصحى). ' +
+      'Numbers (correctIndex, timeLimit) must remain integers — do not translate them.'
+    );
+  }
+  return base;
+}
+
+function buildUserPrompt(topic: string, difficulty: 'easy' | 'medium' | 'hard', count: number, language: 'en' | 'ar'): string {
+  const langInstruction =
+    language === 'ar'
+      ? 'Write the question, options, and explanation in Modern Standard Arabic (فصحى). '
+      : '';
+
   return (
     `Generate ${count} trivia questions about "${topic}" at ${difficulty} difficulty ` +
     `(${difficultyWording(difficulty)}). ` +
+    langInstruction +
     'Return a JSON object with this exact shape:\n' +
     '{\n' +
     '  "questions": [\n' +
@@ -126,15 +144,17 @@ async function callWorkersAI(
   topic: string,
   difficulty: 'easy' | 'medium' | 'hard',
   count: number,
+  language: 'en' | 'ar',
 ): Promise<Question[]> {
   let aiResponse: unknown;
   try {
     aiResponse = await env.AI.run(model as Parameters<Ai['run']>[0], {
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: buildUserPrompt(topic, difficulty, count) },
+        { role: 'system', content: buildSystemPrompt(language) },
+        { role: 'user', content: buildUserPrompt(topic, difficulty, count, language) },
       ],
       max_tokens: 4096,
+      response_format: { type: 'json_object' },
     });
   } catch (e) {
     throw new LLMError(`Workers AI runtime error: ${e instanceof Error ? e.message : String(e)}`, 502);
@@ -146,13 +166,7 @@ async function callWorkersAI(
     throw new LLMError('Empty or unexpected response from Workers AI', 502);
   }
 
-  // Strip any accidental markdown fences the model may still emit
-  const cleaned = content
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```\s*$/, '')
-    .trim();
-
-  const parsed = JSON.parse(cleaned) as { questions: Question[] };
+  const parsed = JSON.parse(content) as { questions: Question[] };
   return parsed.questions;
 }
 
@@ -273,12 +287,16 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
     // Cap count between 1 and 20 server-side
     const safeCount = Math.min(Math.max(1, Number(count) || 10), 20);
 
-    // ── Call Workers AI with 15s timeout ─────────────────────────────────
-    const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct';
+    // ── Validate + normalize language ─────────────────────────────────────
+    const language: 'en' | 'ar' =
+      typeof body.language === 'string' && body.language === 'ar' ? 'ar' : 'en';
+
+    // ── Call Workers AI with 30s timeout ─────────────────────────────────
+    const model = env.LLM_MODEL ?? '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
     const timeoutError = new LLMError('LLM API timeout', 504);
     const questions = await withTimeout(
-      callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount),
-      15000,
+      callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount, language),
+      30000,
       timeoutError,
     );
 

@@ -31,12 +31,14 @@ class GameStateNotifier extends _$GameStateNotifier {
     List<Question> questions, {
     String topic = '',
     String difficulty = 'medium',
+    String language = 'en',
   }) {
     assert(questions.isNotEmpty, 'questions must not be empty');
     state = GameState(
       questions: questions,
       topic: topic,
       difficulty: difficulty,
+      language: language,
       currentIndex: 0,
       playerScore: 0,
       botScore: 0,

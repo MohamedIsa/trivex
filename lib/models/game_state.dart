@@ -17,6 +17,9 @@ class GameState with _$GameState {
     required String topic,
     required String difficulty,
 
+    /// Language code for the current round: 'en' or 'ar'.
+    @Default('en') String language,
+
     /// Index of the currently displayed question (0-based).
     required int currentIndex,
     required int playerScore,

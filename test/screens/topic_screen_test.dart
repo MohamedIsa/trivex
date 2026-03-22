@@ -212,5 +212,44 @@ void main() {
         expect(find.text('Home'), findsOneWidget);
       },
     );
+
+    // ── Tap "عربي" language chip → selected, GameConfig.language is 'ar' ──
+
+    testWidgets(
+      'tap "عربي" chip — becomes selected, GameConfig.language is "ar"',
+      (tester) async {
+        GoRouterState? pushedState;
+
+        await _pumpTopicScreen(
+          tester,
+          onPush: (state) => pushedState = state,
+        );
+
+        // Tap the Arabic language chip.
+        await tester.tap(find.text('عربي'));
+        await tester.pumpAndSettle();
+
+        // Verify the chip shows the active (primary) background.
+        final arChip = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text('عربي'),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final decoration = arChip.decoration as BoxDecoration;
+        expect(decoration.color, AppColors.primary);
+
+        // Enter text and tap Start to verify config carries language: 'ar'.
+        await tester.enterText(find.byType(TextField), 'تاريخ');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Start'));
+        await tester.pumpAndSettle();
+
+        expect(pushedState, isNotNull);
+        final config = pushedState!.extra as GameConfig;
+        expect(config.language, 'ar');
+      },
+    );
   });
 }

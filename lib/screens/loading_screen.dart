@@ -83,6 +83,7 @@ class LoadingScreen extends HookConsumerWidget {
               questions,
               topic: config.topic,
               difficulty: config.difficulty,
+              language: config.language,
             );
 
         if (!context.mounted) return;

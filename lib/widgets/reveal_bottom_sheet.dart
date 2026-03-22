@@ -177,8 +177,13 @@ class _SheetPanel extends ConsumerWidget {
     final correctIdx = state.currentQuestion.correctIndex;
     final correctLetter = String.fromCharCode(65 + correctIdx);
     final isLastQuestion = state.currentIndex >= state.questions.length - 1;
+    final textDirection = state.language == 'ar'
+        ? TextDirection.rtl
+        : TextDirection.ltr;
 
-    return Container(
+    return Directionality(
+      textDirection: textDirection,
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(
         kCardPadding,
@@ -281,6 +286,7 @@ class _SheetPanel extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

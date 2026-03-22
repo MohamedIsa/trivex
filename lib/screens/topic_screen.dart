@@ -18,6 +18,7 @@ class TopicScreen extends HookWidget {
     final topicCtrl = useTextEditingController();
     final difficulty = useState('medium');
     final questionCount = useState(kDefaultQuestionCount);
+    final language = useState('en');
 
     // ── Entry animation ─────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ class TopicScreen extends HookWidget {
           topic: topicCtrl.text.trim(),
           difficulty: difficulty.value,
           count: questionCount.value,
+          language: language.value,
         ),
       );
     }
@@ -184,6 +186,25 @@ class TopicScreen extends HookWidget {
                               kQuestionCountOptions[i],
                         ),
                       ],
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Language toggle pills ─────────────────────────────────
+                  Row(
+                    children: [
+                      _DifficultyPill(
+                        label: 'EN',
+                        selected: language.value == 'en',
+                        onTap: () => language.value = 'en',
+                      ),
+                      const SizedBox(width: 12),
+                      _DifficultyPill(
+                        label: 'عربي',
+                        selected: language.value == 'ar',
+                        onTap: () => language.value = 'ar',
+                      ),
                     ],
                   ),
 

@@ -88,6 +88,7 @@ class ResultScreen extends HookConsumerWidget {
           topic: state.topic,
           difficulty: state.difficulty,
           count: state.questions.length,
+          language: state.language,
         ),
       );
     }
