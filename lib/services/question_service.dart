@@ -19,19 +19,29 @@ class QuestionService {
 
   QuestionService({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Sends `POST /generate` to the Worker and returns exactly 10 [Question]s.
+  /// Sends `POST /generate` to the Worker and returns [Question]s.
+  ///
+  /// When [excludeQuestions] is non-empty the list is included in the request
+  /// body so the Worker instructs the LLM to avoid repeating them.
   ///
   /// Throws:
   /// - [TimeoutException] if the Worker does not respond within 5 seconds.
   /// - [ApiException] for any non-200 HTTP response.
-  Future<List<Question>> fetchQuestions(GameConfig config) async {
+  Future<List<Question>> fetchQuestions(
+    GameConfig config, {
+    List<String> excludeQuestions = const [],
+  }) async {
     final uri = Uri.parse('$kWorkerBaseUrl/generate');
-    final body = jsonEncode({
+    final bodyMap = <String, dynamic>{
       'topic': config.topic,
       'difficulty': config.difficulty,
       'count': config.count,
       'language': config.language,
-    });
+    };
+    if (excludeQuestions.isNotEmpty) {
+      bodyMap['excludeQuestions'] = excludeQuestions;
+    }
+    final body = jsonEncode(bodyMap);
 
     late http.Response response;
     try {

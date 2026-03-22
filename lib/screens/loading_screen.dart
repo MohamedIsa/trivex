@@ -8,6 +8,7 @@ import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../models/game_config.dart';
 import '../providers/game_state_notifier.dart';
+import '../repositories/question_cache_repository.dart';
 import '../services/question_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
@@ -70,9 +71,18 @@ class LoadingScreen extends HookConsumerWidget {
       }
 
       try {
+        // Read previously seen questions for this topic+difficulty+language.
+        final cacheRepo = ref.read(questionCacheRepositoryProvider);
+        final cacheKey = QuestionCacheRepository.cacheKey(
+          topic: config.topic,
+          difficulty: config.difficulty,
+          language: config.language,
+        );
+        final seenQuestions = cacheRepo.getSeenQuestions(cacheKey);
+
         final questions = await QuestionService(
           client: client,
-        ).fetchQuestions(config);
+        ).fetchQuestions(config, excludeQuestions: seenQuestions);
 
         if (cancelled.value || !context.mounted) return;
 

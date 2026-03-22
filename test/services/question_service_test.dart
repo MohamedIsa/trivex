@@ -224,4 +224,55 @@ void main() {
 
     expect(bodyJson['language'], 'en');
   });
+
+  // ── excludeQuestions ──────────────────────────────────────────────────────
+
+  test(
+      'fetchQuestions with non-empty excludeQuestions — '
+      'request body contains excludeQuestions array', () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
+
+    await service.fetchQuestions(
+      config,
+      excludeQuestions: ['What is 1+1?', 'What is 2+2?'],
+    );
+
+    final captured = verify(mockClient.post(
+      any,
+      headers: captureAnyNamed('headers'),
+      body: captureAnyNamed('body'),
+    )).captured;
+
+    final bodyStr = captured[1] as String;
+    final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+    expect(bodyJson['excludeQuestions'], ['What is 1+1?', 'What is 2+2?']);
+  });
+
+  test(
+      'fetchQuestions with empty excludeQuestions — '
+      'request body omits excludeQuestions key', () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
+
+    await service.fetchQuestions(config, excludeQuestions: []);
+
+    final captured = verify(mockClient.post(
+      any,
+      headers: captureAnyNamed('headers'),
+      body: captureAnyNamed('body'),
+    )).captured;
+
+    final bodyStr = captured[1] as String;
+    final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
+
+    expect(bodyJson.containsKey('excludeQuestions'), isFalse);
+  });
 }

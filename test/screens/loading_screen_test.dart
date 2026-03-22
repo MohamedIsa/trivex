@@ -1,13 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:trivex/models/game_config.dart';
+import 'package:trivex/repositories/question_cache_repository.dart';
 import 'package:trivex/screens/loading_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -58,6 +61,18 @@ Future<GoRouter> _pumpLoadingScreen(
 // ---------------------------------------------------------------------------
 
 void main() {
+  late Directory hiveDir;
+
+  setUp(() async {
+    hiveDir = Directory.systemTemp.createTempSync('hive_loading_test_');
+    Hive.init(hiveDir.path);
+    await Hive.openBox(QuestionCacheRepository.boxName);
+  });
+
+  tearDown(() async {
+    await Hive.deleteFromDisk();
+  });
+
   group('LoadingScreen', () {
     // ── Shows error + Try Again on fetch failure ──────────────────────────
 

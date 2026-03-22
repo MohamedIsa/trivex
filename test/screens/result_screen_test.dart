@@ -10,6 +10,7 @@ import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
 import 'package:trivex/repositories/elo_repository.dart';
+import 'package:trivex/repositories/question_cache_repository.dart';
 import 'package:trivex/screens/result_screen.dart';
 import 'package:trivex/services/elo_service.dart';
 
@@ -45,6 +46,20 @@ class _SeedableNotifier extends GameStateNotifier {
 
   @override
   GameState build() => _seedState;
+}
+
+/// In-memory [QuestionCacheRepository] — stores nothing, avoids Hive.
+class _FakeQuestionCacheRepository extends QuestionCacheRepository {
+  final Map<String, List<String>> _store = {};
+
+  @override
+  List<String> getSeenQuestions(String key) =>
+      _store[key] ?? <String>[];
+
+  @override
+  Future<void> save(String key, List<String> questions) async {
+    _store[key] = [...getSeenQuestions(key), ...questions];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -129,10 +144,12 @@ Future<ProviderContainer> _pumpResultScreen(
   });
 
   final fakeRepo = _FakeEloRepository();
+  final fakeCacheRepo = _FakeQuestionCacheRepository();
 
   final container = ProviderContainer(
     overrides: [
       eloRepositoryProvider.overrideWithValue(fakeRepo),
+      questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
       gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
       eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
     ],
@@ -303,11 +320,13 @@ void main() {
         });
 
         final fakeRepo = _FakeEloRepository();
+        final fakeCacheRepo = _FakeQuestionCacheRepository();
         final state = _highScoreState();
 
         final container = ProviderContainer(
           overrides: [
             eloRepositoryProvider.overrideWithValue(fakeRepo),
+            questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
             gameStateNotifierProvider
                 .overrideWith(() => _SeedableNotifier(state)),
             eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
@@ -409,10 +428,12 @@ Future<GoRouter> _pumpWithRouter(
   });
 
   final fakeRepo = _FakeEloRepository();
+  final fakeCacheRepo = _FakeQuestionCacheRepository();
 
   final container = ProviderContainer(
     overrides: [
       eloRepositoryProvider.overrideWithValue(fakeRepo),
+      questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
       gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
       eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
     ],

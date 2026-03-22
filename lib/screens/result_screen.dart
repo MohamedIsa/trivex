@@ -9,6 +9,7 @@ import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
 import '../providers/game_state_notifier.dart';
 import '../repositories/elo_repository.dart';
+import '../repositories/question_cache_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
@@ -71,6 +72,18 @@ class ResultScreen extends HookConsumerWidget {
           ref.invalidate(eloHistoryProvider);
         });
       }
+
+      // Save seen question texts to the deduplication cache.
+      final cacheRepo = ref.read(questionCacheRepositoryProvider);
+      final cacheKey = QuestionCacheRepository.cacheKey(
+        topic: state.topic,
+        difficulty: state.difficulty,
+        language: state.language,
+      );
+      final questionTexts =
+          state.questions.map((q) => q.question).toList();
+      cacheRepo.save(cacheKey, questionTexts);
+
       return null;
     }, const []);
 

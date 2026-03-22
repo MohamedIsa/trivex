@@ -9,6 +9,7 @@ Future<void> main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(EloRecordAdapter());
   await Hive.openBox<EloRecord>('elo_history');
+  await Hive.openBox('question_cache');
   runApp(const ProviderScope(child: MainApp()));
 }
 
