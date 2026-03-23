@@ -5,9 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 
+import 'package:trivex/core/app_error.dart';
+import 'package:trivex/core/result.dart';
 import 'package:trivex/services/question_service.dart';
 import 'package:trivex/models/game_config.dart';
-import 'package:trivex/exceptions/api_exception.dart';
 
 import 'question_service_test.mocks.dart';
 
@@ -46,7 +47,7 @@ void main() {
 
   // ── happy path ────────────────────────────────────────────────────────────
 
-  test('returns List<Question> with 10 items on HTTP 200', () async {
+  test('returns Result.ok with 10 questions on HTTP 200', () async {
     when(mockClient.post(
       any,
       headers: anyNamed('headers'),
@@ -55,12 +56,14 @@ void main() {
 
     final result = await service.fetchQuestions(config);
 
-    expect(result.length, 10);
-    expect(result.first.id, 'q1');
-    expect(result.first.question, 'What is 1 + 1?');
-    expect(result.first.options.length, 4);
-    expect(result.first.correctIndex, 0);
-    expect(result.first.explanation, isNotEmpty);
+    expect(result, isA<Ok<List>>());
+    final questions = (result as Ok).value;
+    expect(questions.length, 10);
+    expect(questions.first.id, 'q1');
+    expect(questions.first.question, 'What is 1 + 1?');
+    expect(questions.first.options.length, 4);
+    expect(questions.first.correctIndex, 0);
+    expect(questions.first.explanation, isNotEmpty);
   });
 
   test('Question.fromJson parses all fields correctly from fixture', () async {
@@ -71,7 +74,8 @@ void main() {
     )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
 
     final result = await service.fetchQuestions(config);
-    final q = result[4]; // 5th question
+    final questions = (result as Ok).value;
+    final q = questions[4]; // 5th question
 
     expect(q.id, 'q5');
     expect(q.correctIndex, 0);
@@ -80,7 +84,8 @@ void main() {
 
   // ── error path ────────────────────────────────────────────────────────────
 
-  test('throws ApiException on non-200 response with error body', () async {
+  test('network error → Result.err(NetworkError) on non-200 with error body',
+      () async {
     when(mockClient.post(
       any,
       headers: anyNamed('headers'),
@@ -90,31 +95,43 @@ void main() {
           502,
         ));
 
-    expect(
-      () => service.fetchQuestions(config),
-      throwsA(
-        isA<ApiException>()
-            .having((e) => e.message, 'message', 'LLM API unavailable')
-            .having((e) => e.retryable, 'retryable', isTrue),
-      ),
-    );
+    final result = await service.fetchQuestions(config);
+
+    expect(result, isA<Err>());
+    final error = (result as Err).error;
+    expect(error, isA<NetworkError>());
+    expect((error as NetworkError).message, 'LLM API unavailable');
   });
 
-  test('throws ApiException with generic message when body is not JSON', () async {
+  test('network error → Result.err(NetworkError) with generic message when body is not JSON',
+      () async {
     when(mockClient.post(
       any,
       headers: anyNamed('headers'),
       body: anyNamed('body'),
     )).thenAnswer((_) async => http.Response('Internal Server Error', 500));
 
-    expect(
-      () => service.fetchQuestions(config),
-      throwsA(
-        isA<ApiException>()
-            .having((e) => e.message, 'message', contains('500'))
-            .having((e) => e.retryable, 'retryable', isFalse),
-      ),
-    );
+    final result = await service.fetchQuestions(config);
+
+    expect(result, isA<Err>());
+    final error = (result as Err).error;
+    expect(error, isA<NetworkError>());
+    expect((error as NetworkError).message, contains('500'));
+  });
+
+  test('parse failure → Result.err(ParseError) on malformed JSON response',
+      () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response('{"questions": "not-a-list"}', 200));
+
+    final result = await service.fetchQuestions(config);
+
+    expect(result, isA<Err>());
+    final error = (result as Err).error;
+    expect(error, isA<ParseError>());
   });
 
   // ── request shape ─────────────────────────────────────────────────────────

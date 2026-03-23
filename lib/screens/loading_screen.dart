@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
+import '../core/app_error.dart';
+import '../core/result.dart';
 import '../models/game_config.dart';
 import '../providers/game_state_notifier.dart';
 import '../repositories/question_cache_repository.dart';
@@ -80,24 +82,37 @@ class LoadingScreen extends HookConsumerWidget {
         );
         final seenQuestions = cacheRepo.getSeenQuestions(cacheKey);
 
-        final questions = await QuestionService(
+        final result = await QuestionService(
           client: client,
         ).fetchQuestions(config, excludeQuestions: seenQuestions);
 
         if (cancelled.value || !context.mounted) return;
 
-        // Initialise game state before navigating.
-        ref
-            .read(gameStateNotifierProvider.notifier)
-            .initGame(
-              questions,
-              topic: config.topic,
-              difficulty: config.difficulty,
-              language: config.language,
-            );
+        switch (result) {
+          case Ok(value: final questions):
+            // Initialise game state before navigating.
+            ref
+                .read(gameStateNotifierProvider.notifier)
+                .initGame(
+                  questions,
+                  topic: config.topic,
+                  difficulty: config.difficulty,
+                  language: config.language,
+                );
 
-        if (!context.mounted) return;
-        context.pushReplacement('/game');
+            if (!context.mounted) return;
+            context.pushReplacement('/game');
+          case Err(error: final appError):
+            if (cancelled.value || !context.mounted) return;
+            pulseCtrl.stop();
+            fetching.value = false;
+            error.value = switch (appError) {
+              TimeoutError() => 'Request timed out. Please try again.',
+              NetworkError(:final message) => message,
+              ParseError(:final message) => message,
+              UnknownError(:final message) => message,
+            };
+        }
       } catch (e) {
         if (cancelled.value || !context.mounted) return;
         pulseCtrl.stop();
