@@ -43,3 +43,6 @@ const Duration kScoreCountDuration = Duration(milliseconds: 800);
 
 /// Confetti burst duration.
 const Duration kConfettiDuration = Duration(seconds: 2);
+
+/// Danger-zone threshold for timer warning audio cue (seconds remaining).
+const int kTimerWarningSeconds = 5;

@@ -20,6 +20,7 @@ dependencies:
   http: ^1.2.2
   fl_chart: ^0.70.2
   confetti: ^0.8.0
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:
@@ -31,9 +32,12 @@ dev_dependencies:
   riverpod_generator: ^2.4.0
   build_runner: ^2.4.13
   mockito: ^5.4.4
+  audioplayers_platform_interface: ^7.1.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sounds/
 
 flutter_launcher_icons:
   android: true

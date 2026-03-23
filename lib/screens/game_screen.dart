@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../providers/game_state_notifier.dart';
+import '../services/timer_warning_sound_player.dart';
 import '../state/game_phase.dart';
 import '../theme/app_colors.dart';
 import '../widgets/game_timer.dart';
@@ -101,6 +102,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                         seconds: round.currentQuestion.timeLimit,
                       ),
                     ),
+                    _TimerWarningAudio(timerController: _timerController),
                     _TimerBar(timerController: _timerController),
 
                     // ── Question + Tiles (scrollable) ─────────────────────────
@@ -157,6 +159,57 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Sub-widgets (private, same file)
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Timer warning audio ─────────────────────────────────────────────────────
+
+/// Plays a short beep **once** when the countdown enters the danger zone
+/// (≤ [kTimerWarningSeconds] seconds remaining) and the phase is still
+/// [PlayingPhase] (i.e. the player has not yet answered).
+///
+/// Renders no pixels — exists purely for its [useEffect] side-effect.
+class _TimerWarningAudio extends HookConsumerWidget {
+  const _TimerWarningAudio({required this.timerController});
+
+  final GameTimerController timerController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phase = ref.watch(gameStateNotifierProvider);
+    final hasFired = useState(false);
+
+    // Reset the flag each time a new question starts (PlayingPhase with a
+    // fresh currentIndex).
+    final currentIndex =
+        phase is PlayingPhase ? phase.round.currentIndex : -1;
+    useEffect(() {
+      hasFired.value = false;
+      return null;
+    }, [currentIndex]);
+
+    // Listen to the animation controller and fire when entering danger zone.
+    final controller = timerController.controller;
+    useEffect(() {
+      if (controller == null) return null;
+
+      void onTick() {
+        if (hasFired.value) return;
+        if (phase is! PlayingPhase) return;
+
+        final remaining =
+            (1.0 - controller.value) * controller.duration!.inSeconds;
+        if (remaining <= kTimerWarningSeconds) {
+          hasFired.value = true;
+          ref.read(timerWarningSoundPlayerProvider).play();
+        }
+      }
+
+      controller.addListener(onTick);
+      return () => controller.removeListener(onTick);
+    }, [controller, phase]);
+
+    return const SizedBox.shrink();
+  }
+}
 
 // ── Top bar ─────────────────────────────────────────────────────────────────
 
