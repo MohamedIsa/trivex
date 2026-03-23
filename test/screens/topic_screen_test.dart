@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:trivex/constants/category_constants.dart';
 import 'package:trivex/models/game_config.dart';
 import 'package:trivex/screens/topic_screen.dart';
 import 'package:trivex/theme/app_colors.dart';
@@ -49,10 +50,10 @@ Future<GoRouter> _pumpTopicScreen(
 
 void main() {
   group('TopicScreen', () {
-    // ── Start button disabled when topic empty ────────────────────────────
+    // ── Start button disabled when nothing selected ───────────────────────
 
     testWidgets(
-      'empty topic field — Start button disabled (AppColors.card bg)',
+      'no selection — Start button disabled (AppColors.card bg)',
       (tester) async {
         await _pumpTopicScreen(tester);
 
@@ -71,14 +72,153 @@ void main() {
       },
     );
 
-    // ── Type text → Start button becomes enabled ──────────────────────────
+    // ── Tap category chip → selected, others deselected ───────────────────
 
     testWidgets(
-      'type topic text — Start button becomes enabled (AppColors.primary bg)',
+      'tapping a category chip — it becomes selected, others deselected',
       (tester) async {
         await _pumpTopicScreen(tester);
 
-        await tester.enterText(find.byType(TextField), 'History');
+        // Tap the first category chip (Science).
+        final scienceLabel = '${kCategories[0].emoji}  ${kCategories[0].label}';
+        await tester.tap(find.text(scienceLabel));
+        await tester.pumpAndSettle();
+
+        // Science chip should be primary.
+        final scienceContainer = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text(scienceLabel),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final sciDecor = scienceContainer.decoration as BoxDecoration;
+        expect(sciDecor.color, AppColors.primary);
+
+        // History chip should NOT be primary.
+        final historyLabel = '${kCategories[1].emoji}  ${kCategories[1].label}';
+        final historyContainer = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text(historyLabel),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final hisDecor = historyContainer.decoration as BoxDecoration;
+        expect(hisDecor.color, isNot(AppColors.primary));
+
+        // Now tap History — it becomes selected, Science deselects.
+        await tester.tap(find.text(historyLabel));
+        await tester.pumpAndSettle();
+
+        final sciAfter = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text(scienceLabel),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final sciDecorAfter = sciAfter.decoration as BoxDecoration;
+        expect(sciDecorAfter.color, isNot(AppColors.primary));
+
+        final hisAfter = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text(historyLabel),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final hisDecorAfter = hisAfter.decoration as BoxDecoration;
+        expect(hisDecorAfter.color, AppColors.primary);
+      },
+    );
+
+    // ── Tap category → Start enabled, passes correct topic ─────────────────
+
+    testWidgets(
+      'tap category + Start — navigates to /loading with category as topic',
+      (tester) async {
+        GoRouterState? pushedState;
+
+        await _pumpTopicScreen(
+          tester,
+          onPush: (state) => pushedState = state,
+        );
+
+        // Tap "Science" category.
+        final scienceLabel = '${kCategories[0].emoji}  ${kCategories[0].label}';
+        await tester.tap(find.text(scienceLabel));
+        await tester.pumpAndSettle();
+
+        // Start should now be enabled.
+        final startContainer = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text('Start'),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final decoration = startContainer.decoration as BoxDecoration;
+        expect(decoration.color, AppColors.primary);
+
+        await tester.tap(find.text('Start'));
+        await tester.pumpAndSettle();
+
+        expect(pushedState, isNotNull);
+        final config = pushedState!.extra as GameConfig;
+        expect(config.topic, 'Science');
+        expect(config.difficulty, 'medium');
+        expect(config.count, 10);
+      },
+    );
+
+    // ── Custom Topic → text field appears ──────────────────────────────────
+
+    testWidgets(
+      'tapping "Custom Topic" → text field appears',
+      (tester) async {
+        await _pumpTopicScreen(tester);
+
+        // No TextField should be visible initially.
+        expect(find.byType(TextField), findsNothing);
+
+        // Tap the "Custom Topic" chip.
+        await tester.tap(find.text('✏️  Custom Topic'));
+        await tester.pumpAndSettle();
+
+        // TextField should now be visible.
+        expect(find.byType(TextField), findsOneWidget);
+      },
+    );
+
+    // ── Custom topic selected + empty text → Start disabled ────────────────
+
+    testWidgets(
+      'custom topic selected + empty text → Start button disabled',
+      (tester) async {
+        await _pumpTopicScreen(tester);
+
+        await tester.tap(find.text('✏️  Custom Topic'));
+        await tester.pumpAndSettle();
+
+        // Start should still be disabled.
+        final startContainer = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text('Start'),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final decoration = startContainer.decoration as BoxDecoration;
+        expect(decoration.color, AppColors.card);
+      },
+    );
+
+    // ── Custom topic selected + non-empty text → Start enabled ─────────────
+
+    testWidgets(
+      'custom topic selected + non-empty text → Start button enabled',
+      (tester) async {
+        await _pumpTopicScreen(tester);
+
+        await tester.tap(find.text('✏️  Custom Topic'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'The Roman Empire');
         await tester.pumpAndSettle();
 
         final startContainer = tester.widget<AnimatedContainer>(
@@ -117,7 +257,7 @@ void main() {
     // ── Tap Start with valid topic → navigates to /loading ────────────────
 
     testWidgets(
-      'tap Start with valid topic — navigates to /loading with GameConfig',
+      'tap Start with custom topic — navigates to /loading with GameConfig',
       (tester) async {
         GoRouterState? pushedState;
 
@@ -125,6 +265,10 @@ void main() {
           tester,
           onPush: (state) => pushedState = state,
         );
+
+        // Select Custom Topic and type a topic.
+        await tester.tap(find.text('✏️  Custom Topic'));
+        await tester.pumpAndSettle();
 
         await tester.enterText(find.byType(TextField), 'Science');
         await tester.pumpAndSettle();
@@ -166,8 +310,9 @@ void main() {
         final decoration = chip15.decoration as BoxDecoration;
         expect(decoration.color, AppColors.primary);
 
-        // Enter text and tap Start to verify the config carries count: 15.
-        await tester.enterText(find.byType(TextField), 'Geography');
+        // Select a category and tap Start to verify the config carries count: 15.
+        final geoLabel = '${kCategories[2].emoji}  ${kCategories[2].label}';
+        await tester.tap(find.text(geoLabel));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Start'));
@@ -225,6 +370,10 @@ void main() {
           onPush: (state) => pushedState = state,
         );
 
+        // Scroll the language chips into view then tap Arabic.
+        await tester.scrollUntilVisible(find.text('عربي'), 100);
+        await tester.pumpAndSettle();
+
         // Tap the Arabic language chip.
         await tester.tap(find.text('عربي'));
         await tester.pumpAndSettle();
@@ -239,8 +388,16 @@ void main() {
         final decoration = arChip.decoration as BoxDecoration;
         expect(decoration.color, AppColors.primary);
 
-        // Enter text and tap Start to verify config carries language: 'ar'.
-        await tester.enterText(find.byType(TextField), 'تاريخ');
+        // Select a category and tap Start to verify config carries language: 'ar'.
+        // Scroll back up to find the category chip.
+        await tester.scrollUntilVisible(
+          find.text('${kCategories[1].emoji}  ${kCategories[1].label}'),
+          -100,
+        );
+        await tester.pumpAndSettle();
+
+        final histLabel = '${kCategories[1].emoji}  ${kCategories[1].label}';
+        await tester.tap(find.text(histLabel));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Start'));
