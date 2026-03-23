@@ -73,16 +73,19 @@ class LoadingScreen extends HookConsumerWidget {
       }
 
       try {
-        // Read previously seen questions for this topic+difficulty.
-        // Note: we don't know the detected language yet (it comes from the
-        // worker response), so we build the pre-fetch cache key without it.
-        // After the response arrives we rebuild the key with the actual language.
+        // Predict the language client-side using the same Arabic Unicode
+        // regex the worker uses, so the cache key matches the one
+        // result_screen.dart saves under after the game.
+        final detectedLanguage =
+            RegExp(r'[\u0600-\u06FF]').hasMatch(config.topic) ? 'ar' : 'en';
+
         final cacheRepo = ref.read(questionCacheRepositoryProvider);
-        final preFetchKey = QuestionCacheRepository.cacheKey(
+        final cacheKey = QuestionCacheRepository.cacheKey(
           topic: config.topic,
           difficulty: config.difficulty,
+          language: detectedLanguage,
         );
-        final seenQuestions = cacheRepo.getSeenQuestions(preFetchKey);
+        final seenQuestions = cacheRepo.getSeenQuestions(cacheKey);
 
         final result = await QuestionService(
           client: client,

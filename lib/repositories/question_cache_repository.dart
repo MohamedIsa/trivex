@@ -38,17 +38,13 @@ class QuestionCacheRepository {
     await _box.put(key, trimmed);
   }
 
-  /// Builds the standard cache key from topic, difficulty, and optional language.
-  ///
-  /// When [language] is omitted (pre-fetch, before the worker responds),
-  /// the key is `'$topic-$difficulty'`.  When provided, the key is
-  /// `'$topic-$difficulty-$language'`.
+  /// Builds the standard cache key from topic, difficulty, and language.
   static String cacheKey({
     required String topic,
     required String difficulty,
-    String? language,
+    required String language,
   }) =>
-      language != null ? '$topic-$difficulty-$language' : '$topic-$difficulty';
+      '$topic-$difficulty-$language';
 }
 
 /// Riverpod provider for [QuestionCacheRepository].

@@ -85,13 +85,49 @@ void main() {
     );
   });
 
-  test('cacheKey without language omits language segment', () {
-    expect(
-      QuestionCacheRepository.cacheKey(
-        topic: 'history',
-        difficulty: 'easy',
-      ),
-      'history-easy',
+  // ── pre-fetch / post-game key parity (UX-005 fix) ─────────────────────
+
+  test('English topic → pre-fetch key matches post-game save key', () {
+    const topic = 'Science';
+    const difficulty = 'medium';
+    // Client-side prediction (same regex as loading_screen / worker)
+    final predictedLang =
+        RegExp(r'[\u0600-\u06FF]').hasMatch(topic) ? 'ar' : 'en';
+
+    final preFetchKey = QuestionCacheRepository.cacheKey(
+      topic: topic,
+      difficulty: difficulty,
+      language: predictedLang,
     );
+    // result_screen saves with the worker-detected language
+    final postGameKey = QuestionCacheRepository.cacheKey(
+      topic: topic,
+      difficulty: difficulty,
+      language: 'en', // worker detects 'en' for English topic
+    );
+
+    expect(preFetchKey, postGameKey);
+    expect(preFetchKey, 'Science-medium-en');
+  });
+
+  test('Arabic topic → pre-fetch key matches post-game save key', () {
+    const topic = 'تاريخ';
+    const difficulty = 'hard';
+    final predictedLang =
+        RegExp(r'[\u0600-\u06FF]').hasMatch(topic) ? 'ar' : 'en';
+
+    final preFetchKey = QuestionCacheRepository.cacheKey(
+      topic: topic,
+      difficulty: difficulty,
+      language: predictedLang,
+    );
+    final postGameKey = QuestionCacheRepository.cacheKey(
+      topic: topic,
+      difficulty: difficulty,
+      language: 'ar', // worker detects 'ar' for Arabic topic
+    );
+
+    expect(preFetchKey, postGameKey);
+    expect(preFetchKey, 'تاريخ-hard-ar');
   });
 }
