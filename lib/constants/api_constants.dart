@@ -1,5 +1,4 @@
-/// API constants — swap [kWorkerBaseUrl] to point at dev or prod.
-const String kWorkerBaseUrl = 'https://trivex-worker.trivex.workers.dev';
+// API constants.
 
 /// HTTP timeout for the question-fetch request.
 ///

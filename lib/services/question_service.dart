@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../constants/api_constants.dart';
 import '../core/app_error.dart';
+import '../core/env.dart';
 import '../core/result.dart';
 import '../models/fetch_result.dart';
 import '../models/game_config.dart';
@@ -31,7 +32,7 @@ class QuestionService {
     GameConfig config, {
     List<String> excludeQuestions = const [],
   }) async {
-    final uri = Uri.parse('$kWorkerBaseUrl/generate');
+    final uri = Uri.parse('${Env.workerBaseUrl}/generate');
     final bodyMap = <String, dynamic>{
       'topic': config.topic,
       'difficulty': config.difficulty,

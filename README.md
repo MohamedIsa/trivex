@@ -126,9 +126,15 @@ LLM_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast"   # model identifier
 > Cloudflare account ID is resolved automatically from your login session. No
 > manual account-ID configuration is needed.
 
-The Flutter app points at the deployed Worker URL in
-`lib/constants/api_constants.dart`. Update `kWorkerBaseUrl` if you deploy to a
-different Worker name or custom domain.
+The Flutter app resolves the Worker URL via `--dart-define`. The production
+URL in `lib/core/env.dart` is used by default. To point at a local Wrangler
+dev server, run:
+
+```bash
+flutter run --dart-define=WORKER_URL=http://localhost:8787
+```
+
+Or use the **Debug (local worker)** launch configuration in VS Code.
 
 ## Running Tests
 

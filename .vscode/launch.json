@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug (local worker)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--dart-define=WORKER_URL=http://localhost:8787"
+      ]
+    },
+    {
+      "name": "Debug (prod worker)",
+      "request": "launch",
+      "type": "dart"
+    }
+  ]
+}
