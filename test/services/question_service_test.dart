@@ -7,6 +7,7 @@ import 'package:mockito/mockito.dart';
 
 import 'package:trivex/core/app_error.dart';
 import 'package:trivex/core/result.dart';
+import 'package:trivex/models/fetch_result.dart';
 import 'package:trivex/services/question_service.dart';
 import 'package:trivex/models/game_config.dart';
 
@@ -25,9 +26,9 @@ Map<String, dynamic> _buildQuestion(int index) => {
       'timeLimit': 15,
     };
 
-String _buildFixture({int count = 10}) {
+String _buildFixture({int count = 10, String language = 'en'}) {
   final questions = List.generate(count, (i) => _buildQuestion(i + 1));
-  return jsonEncode({'questions': questions});
+  return jsonEncode({'questions': questions, 'language': language});
 }
 
 // ---------------------------------------------------------------------------
@@ -56,14 +57,15 @@ void main() {
 
     final result = await service.fetchQuestions(config);
 
-    expect(result, isA<Ok<List>>());
-    final questions = (result as Ok).value;
-    expect(questions.length, 10);
-    expect(questions.first.id, 'q1');
-    expect(questions.first.question, 'What is 1 + 1?');
-    expect(questions.first.options.length, 4);
-    expect(questions.first.correctIndex, 0);
-    expect(questions.first.explanation, isNotEmpty);
+    expect(result, isA<Ok<FetchResult>>());
+    final fetchResult = (result as Ok<FetchResult>).value;
+    expect(fetchResult.questions.length, 10);
+    expect(fetchResult.language, 'en');
+    expect(fetchResult.questions.first.id, 'q1');
+    expect(fetchResult.questions.first.question, 'What is 1 + 1?');
+    expect(fetchResult.questions.first.options.length, 4);
+    expect(fetchResult.questions.first.correctIndex, 0);
+    expect(fetchResult.questions.first.explanation, isNotEmpty);
   });
 
   test('Question.fromJson parses all fields correctly from fixture', () async {
@@ -74,7 +76,7 @@ void main() {
     )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
 
     final result = await service.fetchQuestions(config);
-    final questions = (result as Ok).value;
+    final questions = (result as Ok<FetchResult>).value.questions;
     final q = questions[4]; // 5th question
 
     expect(q.id, 'q5');
@@ -159,6 +161,7 @@ void main() {
     expect(bodyJson['topic'], 'Math');
     expect(bodyJson['difficulty'], 'easy');
     expect(bodyJson['count'], 10);
+    expect(bodyJson.containsKey('language'), isFalse);
   });
 
   test('GameConfig(count: 5) — request body contains "count": 5', () async {
@@ -186,17 +189,9 @@ void main() {
     expect(bodyJson['count'], 5);
   });
 
-  // ── language field ──────────────────────────────────────────────────────
+  // ── language auto-detection (UX-005) ──────────────────────────────────────
 
-  test('GameConfig(language: "ar") — request body contains "language": "ar"',
-      () async {
-    const configAr = GameConfig(
-      topic: 'تاريخ',
-      difficulty: 'easy',
-      count: 3,
-      language: 'ar',
-    );
-
+  test('request body does NOT contain language field', () async {
     when(mockClient.post(
       any,
       headers: anyNamed('headers'),
@@ -204,29 +199,6 @@ void main() {
     )).thenAnswer(
       (_) async => http.Response(_buildFixture(count: 3), 200),
     );
-
-    await service.fetchQuestions(configAr);
-
-    final captured = verify(mockClient.post(
-      any,
-      headers: captureAnyNamed('headers'),
-      body: captureAnyNamed('body'),
-    )).captured;
-
-    final bodyStr = captured[1] as String;
-    final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
-
-    expect(bodyJson['language'], 'ar');
-    expect(bodyJson['topic'], 'تاريخ');
-  });
-
-  test('default GameConfig — request body contains "language": "en"',
-      () async {
-    when(mockClient.post(
-      any,
-      headers: anyNamed('headers'),
-      body: anyNamed('body'),
-    )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
 
     await service.fetchQuestions(config);
 
@@ -239,7 +211,62 @@ void main() {
     final bodyStr = captured[1] as String;
     final bodyJson = jsonDecode(bodyStr) as Map<String, dynamic>;
 
-    expect(bodyJson['language'], 'en');
+    expect(bodyJson.containsKey('language'), isFalse);
+  });
+
+  test('response with language: "ar" → FetchResult.language is "ar"',
+      () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer(
+      (_) async => http.Response(_buildFixture(count: 3, language: 'ar'), 200),
+    );
+
+    const configAr = GameConfig(
+      topic: 'تاريخ',
+      difficulty: 'easy',
+      count: 3,
+    );
+    final result = await service.fetchQuestions(configAr);
+
+    expect(result, isA<Ok<FetchResult>>());
+    final fetchResult = (result as Ok<FetchResult>).value;
+    expect(fetchResult.language, 'ar');
+    expect(fetchResult.questions.length, 3);
+  });
+
+  test('response with language: "en" → FetchResult.language is "en"',
+      () async {
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(_buildFixture(), 200));
+
+    final result = await service.fetchQuestions(config);
+
+    expect(result, isA<Ok<FetchResult>>());
+    expect((result as Ok<FetchResult>).value.language, 'en');
+  });
+
+  test('response missing language field → defaults to "en"', () async {
+    // Build a response without the language field.
+    final questionsOnly = jsonEncode({
+      'questions': List.generate(10, (i) => _buildQuestion(i + 1)),
+    });
+
+    when(mockClient.post(
+      any,
+      headers: anyNamed('headers'),
+      body: anyNamed('body'),
+    )).thenAnswer((_) async => http.Response(questionsOnly, 200));
+
+    final result = await service.fetchQuestions(config);
+
+    expect(result, isA<Ok<FetchResult>>());
+    expect((result as Ok<FetchResult>).value.language, 'en');
   });
 
   // ── excludeQuestions ──────────────────────────────────────────────────────

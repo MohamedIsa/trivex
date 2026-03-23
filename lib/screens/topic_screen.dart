@@ -10,7 +10,7 @@ import '../models/game_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
-/// Topic selection + difficulty picker (UI-002).
+/// Topic selection + difficulty picker .
 class TopicScreen extends HookWidget {
   const TopicScreen({super.key});
 
@@ -19,7 +19,6 @@ class TopicScreen extends HookWidget {
     final customTopicCtrl = useTextEditingController();
     final difficulty = useState('medium');
     final questionCount = useState(kDefaultQuestionCount);
-    final language = useState('en');
 
     /// Index into [kCategories], or `null` when nothing / custom is selected.
     final selectedCategory = useState<int?>(null);
@@ -75,7 +74,6 @@ class TopicScreen extends HookWidget {
           topic: topic,
           difficulty: difficulty.value,
           count: questionCount.value,
-          language: language.value,
         ),
       );
     }
@@ -247,25 +245,6 @@ class TopicScreen extends HookWidget {
                                       kQuestionCountOptions[i],
                                 ),
                               ],
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // ── Language toggle pills ─────────────────────
-                          Row(
-                            children: [
-                              _DifficultyPill(
-                                label: 'EN',
-                                selected: language.value == 'en',
-                                onTap: () => language.value = 'en',
-                              ),
-                              const SizedBox(width: 12),
-                              _DifficultyPill(
-                                label: 'عربي',
-                                selected: language.value == 'ar',
-                                onTap: () => language.value = 'ar',
-                              ),
                             ],
                           ),
                         ],

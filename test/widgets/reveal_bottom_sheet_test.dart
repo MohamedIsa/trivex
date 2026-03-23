@@ -343,7 +343,7 @@ void main() {
       },
     );
 
-    // ── BUG-009: first-frame heading tests ────────────────────────────────
+    // first-frame heading tests ────────────────────────────────
 
     testWidgets(
       'correct answer — "Correct!" on first visible frame, no flash',

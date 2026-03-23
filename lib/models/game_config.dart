@@ -15,22 +15,17 @@ class GameConfig with _$GameConfig {
 
     /// Number of questions per round.
     required int count,
-
-    /// Language code: 'en' (English) or 'ar' (Arabic).
-    @Default('en') String language,
   }) = _GameConfig;
 
   factory GameConfig.fromJson(Map<String, dynamic> json) => GameConfig(
         topic: json['topic'] as String,
         difficulty: json['difficulty'] as String,
         count: json['count'] as int? ?? 10,
-        language: json['language'] as String? ?? 'en',
       );
 
   Map<String, dynamic> toJson() => {
         'topic': topic,
         'difficulty': difficulty,
         'count': count,
-        'language': language,
       };
 }

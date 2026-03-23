@@ -2,7 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'round_result.freezed.dart';
 
-/// RoundResult — produced at the end of a game round and passed to UI-006.
+/// RoundResult — produced at the end of a game round and passed
 @Freezed(fromJson: false, toJson: false)
 class RoundResult with _$RoundResult {
   const RoundResult._();

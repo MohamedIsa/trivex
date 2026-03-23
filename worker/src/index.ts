@@ -1,6 +1,6 @@
 /**
  * Trivex Worker — Cloudflare Workers backend
- * POST /generate  → calls Workers AI, validates response, returns trivia questions (WORKER-003)
+ * POST /generate  → calls Workers AI, validates response, returns trivia questions
  */
 
 export interface Env {
@@ -21,12 +21,12 @@ interface GenerateRequest {
   topic: string;
   difficulty: 'easy' | 'medium' | 'hard';
   count: number;
-  language?: 'en' | 'ar';
   excludeQuestions?: string[];
 }
 
 interface GenerateResponse {
   questions: Question[];
+  language: 'en' | 'ar';
 }
 
 interface ErrorResponse {
@@ -63,6 +63,18 @@ function corsResponse(body: string, status: number, extraHeaders?: HeadersInit):
 function errorResponse(error: string, retryable: boolean, status: number): Response {
   const body: ErrorResponse = { error, retryable };
   return corsResponse(JSON.stringify(body), status);
+}
+
+// ---------------------------------------------------------------------------
+// Language auto-detection from topic text
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns 'ar' when the topic contains any Arabic Unicode character (U+0600–U+06FF),
+ * otherwise returns 'en'.
+ */
+function detectLanguage(topic: string): 'en' | 'ar' {
+  return /[\u0600-\u06FF]/.test(topic) ? 'ar' : 'en';
 }
 
 // ---------------------------------------------------------------------------
@@ -214,7 +226,7 @@ class LLMError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// Validation type guard (WORKER-003)
+// Validation type guard
 // ---------------------------------------------------------------------------
 
 function isValidQuestion(q: unknown): q is Question {
@@ -254,7 +266,7 @@ function isValidQuestion(q: unknown): q is Question {
 }
 
 // ---------------------------------------------------------------------------
-// 5-second timeout helper (WORKER-003)
+// 5-second timeout helper
 // ---------------------------------------------------------------------------
 
 function withTimeout<T>(promise: Promise<T>, ms: number, timeoutError: Error): Promise<T> {
@@ -316,9 +328,8 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
     // Cap count between 1 and 20 server-side
     const safeCount = Math.min(Math.max(1, Number(count) || 10), 20);
 
-    // ── Validate + normalize language ─────────────────────────────────────
-    const language: 'en' | 'ar' =
-      typeof body.language === 'string' && body.language === 'ar' ? 'ar' : 'en';
+    // ── Auto-detect language from topic text ────────────────────
+    const language = detectLanguage(topic.trim());
 
     // ── Validate + cap excludeQuestions ──────────────────────────────────
     const rawExclude = Array.isArray(body.excludeQuestions) ? body.excludeQuestions : [];
@@ -335,12 +346,12 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
       timeoutError,
     );
 
-    // ── Validate response shape (WORKER-003) ────────────────────────────────
+    // ── Validate response shape ────────────────────────────────
     if (!Array.isArray(questions) || questions.length !== safeCount || !questions.every(isValidQuestion)) {
       return errorResponse('Invalid question format from LLM', true, 422);
     }
 
-    const responseBody: GenerateResponse = { questions };
+    const responseBody: GenerateResponse = { questions, language };
     return corsResponse(JSON.stringify(responseBody), 200);
   } catch (err) {
     // Never let an unhandled error escape as a naked 500

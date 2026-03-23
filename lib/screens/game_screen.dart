@@ -9,7 +9,7 @@ import '../theme/app_colors.dart';
 import '../widgets/game_timer.dart';
 import '../widgets/reveal_bottom_sheet.dart';
 
-/// Game screen — core question loop (UI-004).
+/// Game screen — core question loop .
 ///
 /// Fixed top bar with Q number + live scores, a colour-shifting timer bar,
 /// question text with slide-in animation, and four answer tiles that change
@@ -117,7 +117,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ],
               ),
 
-              // ── Reveal overlay (UI-005) ─────────────────────────────────
+              // ── Reveal overlay ────────────────────────────────────────────────
               RevealBottomSheet(timerController: _timerController),
             ],
           ),

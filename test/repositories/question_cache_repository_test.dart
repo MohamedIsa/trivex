@@ -66,7 +66,7 @@ void main() {
 
   // ── cacheKey ──────────────────────────────────────────────────────────────
 
-  test('cacheKey builds correct format', () {
+  test('cacheKey builds correct format with language', () {
     expect(
       QuestionCacheRepository.cacheKey(
         topic: 'history',
@@ -82,6 +82,16 @@ void main() {
         language: 'ar',
       ),
       'تاريخ-hard-ar',
+    );
+  });
+
+  test('cacheKey without language omits language segment', () {
+    expect(
+      QuestionCacheRepository.cacheKey(
+        topic: 'history',
+        difficulty: 'easy',
+      ),
+      'history-easy',
     );
   });
 }

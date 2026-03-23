@@ -24,9 +24,6 @@ mixin _$GameConfig {
   /// Number of questions per round.
   int get count => throw _privateConstructorUsedError;
 
-  /// Language code: 'en' (English) or 'ar' (Arabic).
-  String get language => throw _privateConstructorUsedError;
-
   @JsonKey(ignore: true)
   $GameConfigCopyWith<GameConfig> get copyWith =>
       throw _privateConstructorUsedError;
@@ -38,7 +35,7 @@ abstract class $GameConfigCopyWith<$Res> {
           GameConfig value, $Res Function(GameConfig) then) =
       _$GameConfigCopyWithImpl<$Res, GameConfig>;
   @useResult
-  $Res call({String topic, String difficulty, int count, String language});
+  $Res call({String topic, String difficulty, int count});
 }
 
 /// @nodoc
@@ -57,7 +54,6 @@ class _$GameConfigCopyWithImpl<$Res, $Val extends GameConfig>
     Object? topic = null,
     Object? difficulty = null,
     Object? count = null,
-    Object? language = null,
   }) {
     return _then(_value.copyWith(
       topic: null == topic
@@ -72,10 +68,6 @@ class _$GameConfigCopyWithImpl<$Res, $Val extends GameConfig>
           ? _value.count
           : count // ignore: cast_nullable_to_non_nullable
               as int,
-      language: null == language
-          ? _value.language
-          : language // ignore: cast_nullable_to_non_nullable
-              as String,
     ) as $Val);
   }
 }
@@ -88,7 +80,7 @@ abstract class _$$GameConfigImplCopyWith<$Res>
       __$$GameConfigImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String topic, String difficulty, int count, String language});
+  $Res call({String topic, String difficulty, int count});
 }
 
 /// @nodoc
@@ -105,7 +97,6 @@ class __$$GameConfigImplCopyWithImpl<$Res>
     Object? topic = null,
     Object? difficulty = null,
     Object? count = null,
-    Object? language = null,
   }) {
     return _then(_$GameConfigImpl(
       topic: null == topic
@@ -120,10 +111,6 @@ class __$$GameConfigImplCopyWithImpl<$Res>
           ? _value.count
           : count // ignore: cast_nullable_to_non_nullable
               as int,
-      language: null == language
-          ? _value.language
-          : language // ignore: cast_nullable_to_non_nullable
-              as String,
     ));
   }
 }
@@ -132,10 +119,7 @@ class __$$GameConfigImplCopyWithImpl<$Res>
 
 class _$GameConfigImpl extends _GameConfig {
   const _$GameConfigImpl(
-      {required this.topic,
-      required this.difficulty,
-      required this.count,
-      this.language = 'en'})
+      {required this.topic, required this.difficulty, required this.count})
       : super._();
 
   @override
@@ -149,14 +133,9 @@ class _$GameConfigImpl extends _GameConfig {
   @override
   final int count;
 
-  /// Language code: 'en' (English) or 'ar' (Arabic).
-  @override
-  @JsonKey()
-  final String language;
-
   @override
   String toString() {
-    return 'GameConfig(topic: $topic, difficulty: $difficulty, count: $count, language: $language)';
+    return 'GameConfig(topic: $topic, difficulty: $difficulty, count: $count)';
   }
 
   @override
@@ -167,14 +146,11 @@ class _$GameConfigImpl extends _GameConfig {
             (identical(other.topic, topic) || other.topic == topic) &&
             (identical(other.difficulty, difficulty) ||
                 other.difficulty == difficulty) &&
-            (identical(other.count, count) || other.count == count) &&
-            (identical(other.language, language) ||
-                other.language == language));
+            (identical(other.count, count) || other.count == count));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, topic, difficulty, count, language);
+  int get hashCode => Object.hash(runtimeType, topic, difficulty, count);
 
   @JsonKey(ignore: true)
   @override
@@ -187,8 +163,7 @@ abstract class _GameConfig extends GameConfig {
   const factory _GameConfig(
       {required final String topic,
       required final String difficulty,
-      required final int count,
-      final String language}) = _$GameConfigImpl;
+      required final int count}) = _$GameConfigImpl;
   const _GameConfig._() : super._();
 
   @override
@@ -201,10 +176,6 @@ abstract class _GameConfig extends GameConfig {
 
   /// Number of questions per round.
   int get count;
-  @override
-
-  /// Language code: 'en' (English) or 'ar' (Arabic).
-  String get language;
   @override
   @JsonKey(ignore: true)
   _$$GameConfigImplCopyWith<_$GameConfigImpl> get copyWith =>

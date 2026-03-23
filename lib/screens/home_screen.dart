@@ -10,7 +10,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 import '../widgets/elo_sparkline.dart';
 
-/// Home screen — ELO display, sparkline & Play button (UI-001).
+/// Home screen — ELO display, sparkline & Play button .
 class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
 

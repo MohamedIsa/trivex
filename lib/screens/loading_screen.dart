@@ -15,7 +15,7 @@ import '../services/question_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
-/// Loading screen — pulsing wordmark, question fetch, error retry (UI-003).
+/// Loading screen — pulsing wordmark, question fetch, error retry .
 class LoadingScreen extends HookConsumerWidget {
   const LoadingScreen({super.key, this.gameConfig});
 
@@ -73,14 +73,16 @@ class LoadingScreen extends HookConsumerWidget {
       }
 
       try {
-        // Read previously seen questions for this topic+difficulty+language.
+        // Read previously seen questions for this topic+difficulty.
+        // Note: we don't know the detected language yet (it comes from the
+        // worker response), so we build the pre-fetch cache key without it.
+        // After the response arrives we rebuild the key with the actual language.
         final cacheRepo = ref.read(questionCacheRepositoryProvider);
-        final cacheKey = QuestionCacheRepository.cacheKey(
+        final preFetchKey = QuestionCacheRepository.cacheKey(
           topic: config.topic,
           difficulty: config.difficulty,
-          language: config.language,
         );
-        final seenQuestions = cacheRepo.getSeenQuestions(cacheKey);
+        final seenQuestions = cacheRepo.getSeenQuestions(preFetchKey);
 
         final result = await QuestionService(
           client: client,
@@ -89,15 +91,15 @@ class LoadingScreen extends HookConsumerWidget {
         if (cancelled.value || !context.mounted) return;
 
         switch (result) {
-          case Ok(value: final questions):
+          case Ok(value: final fetchResult):
             // Initialise game state before navigating.
             ref
                 .read(gameStateNotifierProvider.notifier)
                 .initGame(
-                  questions,
+                  fetchResult.questions,
                   topic: config.topic,
                   difficulty: config.difficulty,
-                  language: config.language,
+                  language: fetchResult.language,
                 );
 
             if (!context.mounted) return;

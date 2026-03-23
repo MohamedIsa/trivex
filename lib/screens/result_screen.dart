@@ -13,7 +13,7 @@ import '../repositories/question_cache_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
-/// Result screen — round summary, ELO delta, action buttons (UI-006).
+/// Result screen — round summary, ELO delta, action buttons.
 class ResultScreen extends HookConsumerWidget {
   const ResultScreen({super.key});
 
@@ -101,7 +101,6 @@ class ResultScreen extends HookConsumerWidget {
           topic: state.topic,
           difficulty: state.difficulty,
           count: state.questions.length,
-          language: state.language,
         ),
       );
     }

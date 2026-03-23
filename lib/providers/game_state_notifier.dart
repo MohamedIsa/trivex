@@ -11,9 +11,9 @@ part 'game_state_notifier.g.dart';
 
 /// Central game-state manager.
 ///
-/// Consumed by the Game screen (UI-004) and Reveal screen (UI-005).
-/// The timer (GAME-003) drives [timeExpired].
-/// ELO calculation (ELO-001) reads [state] after [isGameOver] becomes true.
+/// Consumed by the Game screen and Reveal screen.
+/// The timer drives [timeExpired].
+/// ELO calculation reads [state] after [isGameOver] becomes true.
 @Riverpod(keepAlive: true)
 class GameStateNotifier extends _$GameStateNotifier {
   @override

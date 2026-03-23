@@ -10,9 +10,9 @@ String _$gameStateNotifierHash() => r'529295a5168085505e244224ff7ff4de6d2907c6';
 
 /// Central game-state manager.
 ///
-/// Consumed by the Game screen (UI-004) and Reveal screen (UI-005).
-/// The timer (GAME-003) drives [timeExpired].
-/// ELO calculation (ELO-001) reads [state] after [isGameOver] becomes true.
+/// Consumed by the Game screen and Reveal screen.
+/// The timer drives [timeExpired].
+/// ELO calculation reads [state] after [isGameOver] becomes true.
 ///
 /// Copied from [GameStateNotifier].
 @ProviderFor(GameStateNotifier)

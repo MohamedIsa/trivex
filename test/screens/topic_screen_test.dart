@@ -358,54 +358,15 @@ void main() {
       },
     );
 
-    // ── Tap "عربي" language chip → selected, GameConfig.language is 'ar' ──
+    // ── No language toggle visible (auto-detected by worker) ───────────────
 
     testWidgets(
-      'tap "عربي" chip — becomes selected, GameConfig.language is "ar"',
+      'no EN/عربي language chips are visible (UX-005)',
       (tester) async {
-        GoRouterState? pushedState;
+        await _pumpTopicScreen(tester);
 
-        await _pumpTopicScreen(
-          tester,
-          onPush: (state) => pushedState = state,
-        );
-
-        // Scroll the language chips into view then tap Arabic.
-        await tester.scrollUntilVisible(find.text('عربي'), 100);
-        await tester.pumpAndSettle();
-
-        // Tap the Arabic language chip.
-        await tester.tap(find.text('عربي'));
-        await tester.pumpAndSettle();
-
-        // Verify the chip shows the active (primary) background.
-        final arChip = tester.widget<AnimatedContainer>(
-          find.ancestor(
-            of: find.text('عربي'),
-            matching: find.byType(AnimatedContainer),
-          ),
-        );
-        final decoration = arChip.decoration as BoxDecoration;
-        expect(decoration.color, AppColors.primary);
-
-        // Select a category and tap Start to verify config carries language: 'ar'.
-        // Scroll back up to find the category chip.
-        await tester.scrollUntilVisible(
-          find.text('${kCategories[1].emoji}  ${kCategories[1].label}'),
-          -100,
-        );
-        await tester.pumpAndSettle();
-
-        final histLabel = '${kCategories[1].emoji}  ${kCategories[1].label}';
-        await tester.tap(find.text(histLabel));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('Start'));
-        await tester.pumpAndSettle();
-
-        expect(pushedState, isNotNull);
-        final config = pushedState!.extra as GameConfig;
-        expect(config.language, 'ar');
+        expect(find.text('EN'), findsNothing);
+        expect(find.text('عربي'), findsNothing);
       },
     );
   });
