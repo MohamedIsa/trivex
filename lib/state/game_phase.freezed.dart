@@ -28,6 +28,12 @@ mixin _$GameRound {
   int get playerScore => throw _privateConstructorUsedError;
   int get botScore => throw _privateConstructorUsedError;
 
+  /// Per-question correctness — `true` if the player answered correctly.
+  List<bool> get playerCorrect => throw _privateConstructorUsedError;
+
+  /// Per-question answer time in seconds (timeLimit − timeLeft).
+  List<int> get answerTimesSeconds => throw _privateConstructorUsedError;
+
   @JsonKey(ignore: true)
   $GameRoundCopyWith<GameRound> get copyWith =>
       throw _privateConstructorUsedError;
@@ -45,7 +51,9 @@ abstract class $GameRoundCopyWith<$Res> {
       String language,
       int currentIndex,
       int playerScore,
-      int botScore});
+      int botScore,
+      List<bool> playerCorrect,
+      List<int> answerTimesSeconds});
 }
 
 /// @nodoc
@@ -68,6 +76,8 @@ class _$GameRoundCopyWithImpl<$Res, $Val extends GameRound>
     Object? currentIndex = null,
     Object? playerScore = null,
     Object? botScore = null,
+    Object? playerCorrect = null,
+    Object? answerTimesSeconds = null,
   }) {
     return _then(_value.copyWith(
       questions: null == questions
@@ -98,6 +108,14 @@ class _$GameRoundCopyWithImpl<$Res, $Val extends GameRound>
           ? _value.botScore
           : botScore // ignore: cast_nullable_to_non_nullable
               as int,
+      playerCorrect: null == playerCorrect
+          ? _value.playerCorrect
+          : playerCorrect // ignore: cast_nullable_to_non_nullable
+              as List<bool>,
+      answerTimesSeconds: null == answerTimesSeconds
+          ? _value.answerTimesSeconds
+          : answerTimesSeconds // ignore: cast_nullable_to_non_nullable
+              as List<int>,
     ) as $Val);
   }
 }
@@ -117,7 +135,9 @@ abstract class _$$GameRoundImplCopyWith<$Res>
       String language,
       int currentIndex,
       int playerScore,
-      int botScore});
+      int botScore,
+      List<bool> playerCorrect,
+      List<int> answerTimesSeconds});
 }
 
 /// @nodoc
@@ -138,6 +158,8 @@ class __$$GameRoundImplCopyWithImpl<$Res>
     Object? currentIndex = null,
     Object? playerScore = null,
     Object? botScore = null,
+    Object? playerCorrect = null,
+    Object? answerTimesSeconds = null,
   }) {
     return _then(_$GameRoundImpl(
       questions: null == questions
@@ -168,6 +190,14 @@ class __$$GameRoundImplCopyWithImpl<$Res>
           ? _value.botScore
           : botScore // ignore: cast_nullable_to_non_nullable
               as int,
+      playerCorrect: null == playerCorrect
+          ? _value._playerCorrect
+          : playerCorrect // ignore: cast_nullable_to_non_nullable
+              as List<bool>,
+      answerTimesSeconds: null == answerTimesSeconds
+          ? _value._answerTimesSeconds
+          : answerTimesSeconds // ignore: cast_nullable_to_non_nullable
+              as List<int>,
     ));
   }
 }
@@ -182,8 +212,12 @@ class _$GameRoundImpl extends _GameRound {
       this.language = 'en',
       required this.currentIndex,
       required this.playerScore,
-      required this.botScore})
+      required this.botScore,
+      final List<bool> playerCorrect = const <bool>[],
+      final List<int> answerTimesSeconds = const <int>[]})
       : _questions = questions,
+        _playerCorrect = playerCorrect,
+        _answerTimesSeconds = answerTimesSeconds,
         super._();
 
   final List<Question> _questions;
@@ -212,9 +246,34 @@ class _$GameRoundImpl extends _GameRound {
   @override
   final int botScore;
 
+  /// Per-question correctness — `true` if the player answered correctly.
+  final List<bool> _playerCorrect;
+
+  /// Per-question correctness — `true` if the player answered correctly.
+  @override
+  @JsonKey()
+  List<bool> get playerCorrect {
+    if (_playerCorrect is EqualUnmodifiableListView) return _playerCorrect;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_playerCorrect);
+  }
+
+  /// Per-question answer time in seconds (timeLimit − timeLeft).
+  final List<int> _answerTimesSeconds;
+
+  /// Per-question answer time in seconds (timeLimit − timeLeft).
+  @override
+  @JsonKey()
+  List<int> get answerTimesSeconds {
+    if (_answerTimesSeconds is EqualUnmodifiableListView)
+      return _answerTimesSeconds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_answerTimesSeconds);
+  }
+
   @override
   String toString() {
-    return 'GameRound(questions: $questions, topic: $topic, difficulty: $difficulty, language: $language, currentIndex: $currentIndex, playerScore: $playerScore, botScore: $botScore)';
+    return 'GameRound(questions: $questions, topic: $topic, difficulty: $difficulty, language: $language, currentIndex: $currentIndex, playerScore: $playerScore, botScore: $botScore, playerCorrect: $playerCorrect, answerTimesSeconds: $answerTimesSeconds)';
   }
 
   @override
@@ -234,7 +293,11 @@ class _$GameRoundImpl extends _GameRound {
             (identical(other.playerScore, playerScore) ||
                 other.playerScore == playerScore) &&
             (identical(other.botScore, botScore) ||
-                other.botScore == botScore));
+                other.botScore == botScore) &&
+            const DeepCollectionEquality()
+                .equals(other._playerCorrect, _playerCorrect) &&
+            const DeepCollectionEquality()
+                .equals(other._answerTimesSeconds, _answerTimesSeconds));
   }
 
   @override
@@ -246,7 +309,9 @@ class _$GameRoundImpl extends _GameRound {
       language,
       currentIndex,
       playerScore,
-      botScore);
+      botScore,
+      const DeepCollectionEquality().hash(_playerCorrect),
+      const DeepCollectionEquality().hash(_answerTimesSeconds));
 
   @JsonKey(ignore: true)
   @override
@@ -263,7 +328,9 @@ abstract class _GameRound extends GameRound {
       final String language,
       required final int currentIndex,
       required final int playerScore,
-      required final int botScore}) = _$GameRoundImpl;
+      required final int botScore,
+      final List<bool> playerCorrect,
+      final List<int> answerTimesSeconds}) = _$GameRoundImpl;
   const _GameRound._() : super._();
 
   @override
@@ -284,6 +351,14 @@ abstract class _GameRound extends GameRound {
   int get playerScore;
   @override
   int get botScore;
+  @override
+
+  /// Per-question correctness — `true` if the player answered correctly.
+  List<bool> get playerCorrect;
+  @override
+
+  /// Per-question answer time in seconds (timeLimit − timeLeft).
+  List<int> get answerTimesSeconds;
   @override
   @JsonKey(ignore: true)
   _$$GameRoundImplCopyWith<_$GameRoundImpl> get copyWith =>

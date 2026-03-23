@@ -24,6 +24,12 @@ class GameRound with _$GameRound {
     required int currentIndex,
     required int playerScore,
     required int botScore,
+
+    /// Per-question correctness — `true` if the player answered correctly.
+    @Default(<bool>[]) List<bool> playerCorrect,
+
+    /// Per-question answer time in seconds (timeLimit − timeLeft).
+    @Default(<int>[]) List<int> answerTimesSeconds,
   }) = _GameRound;
 
   /// Convenience: the question currently on-screen.

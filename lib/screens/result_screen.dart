@@ -4,13 +4,16 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../models/achievement.dart';
 import '../models/game_config.dart';
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
 import '../providers/game_state_notifier.dart';
+import '../repositories/achievement_repository.dart';
 import '../repositories/elo_repository.dart';
 import '../repositories/question_cache_repository.dart';
+import '../services/achievement_service.dart';
 import '../state/game_phase.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
@@ -78,9 +81,10 @@ class ResultScreen extends HookConsumerWidget {
     );
     useEffect(() => confettiCtrl.dispose, const []);
 
-    // ── ELO persistence (runs once on mount) ────────────────────────────────
+    // ── ELO persistence + achievement check (runs once on mount) ──────────
 
     final previousElo = useRef(1000);
+    final newUnlocks = useRef(<String>[]);
 
     useEffect(() {
       final eloRepo = ref.read(eloRepositoryProvider);
@@ -103,6 +107,48 @@ class ResultScreen extends HookConsumerWidget {
         final questionTexts =
             round.questions.map((q) => q.question).toList();
         cacheRepo.save(cacheKey, questionTexts);
+
+        // ── Achievement checking ──────────────────────────────────────
+        final achieveRepo = ref.read(achievementRepositoryProvider);
+        final playerWon = round.playerScore > round.botScore;
+
+        // Update auxiliary counters.
+        achieveRepo.incrementGamesPlayed();
+        if (playerWon) {
+          achieveRepo.setWinStreak(achieveRepo.getWinStreak() + 1);
+        } else {
+          achieveRepo.setWinStreak(0);
+        }
+
+        final unlocked = AchievementService.checkNewUnlocks(
+          round: round,
+          eloResult: phase.eloResult,
+          alreadyUnlocked: achieveRepo.getUnlocked(),
+          gamesPlayed: achieveRepo.getGamesPlayed(),
+          winStreak: achieveRepo.getWinStreak(),
+        );
+
+        for (final id in unlocked) {
+          achieveRepo.unlock(id);
+        }
+        newUnlocks.value = unlocked;
+
+        // Show toast for each new unlock with staggered delay.
+        for (var i = 0; i < unlocked.length; i++) {
+          final a = kAchievements.firstWhere((a) => a.id == unlocked[i]);
+          Future.delayed(Duration(milliseconds: 500 * (i + 1)), () {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${a.emoji}  ${a.name} unlocked!'),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: AppColors.primary,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          });
+        }
       }
 
       return null;

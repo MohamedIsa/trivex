@@ -6,7 +6,7 @@ part of 'game_state_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$gameStateNotifierHash() => r'50bf14339cf0e25b5bb5bbf244a5ad579e44c667';
+String _$gameStateNotifierHash() => r'e21a72b7b6044cb36d6ab70356a0c25070d05e67';
 
 /// Central game-state manager backed by the [GamePhase] sealed union.
 ///

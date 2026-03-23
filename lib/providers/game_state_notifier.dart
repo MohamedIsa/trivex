@@ -75,6 +75,11 @@ class GameStateNotifier extends _$GameStateNotifier {
       round: round.copyWith(
         playerScore: round.playerScore + playerPoints,
         botScore: round.botScore + botPoints,
+        playerCorrect: [...round.playerCorrect, playerCorrect],
+        answerTimesSeconds: [
+          ...round.answerTimesSeconds,
+          round.currentQuestion.timeLimit - timeLeft,
+        ],
       ),
       selectedIndex: index,
     );
@@ -117,7 +122,14 @@ class GameStateNotifier extends _$GameStateNotifier {
     final botPoints = botCorrect ? 100 : 0;
 
     state = GamePhase.revealing(
-      round: round.copyWith(botScore: round.botScore + botPoints),
+      round: round.copyWith(
+        botScore: round.botScore + botPoints,
+        playerCorrect: [...round.playerCorrect, false],
+        answerTimesSeconds: [
+          ...round.answerTimesSeconds,
+          round.currentQuestion.timeLimit,
+        ],
+      ),
       // selectedIndex stays null — no player selection.
     );
   }

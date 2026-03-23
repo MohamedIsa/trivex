@@ -104,6 +104,22 @@ class HomeScreen extends HookConsumerWidget {
             ),
             Positioned(
               top: 8,
+              left: 8,
+              child: Semantics(
+                label: 'Achievements',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.emoji_events,
+                    color: AppColors.muted,
+                  ),
+                  tooltip: 'Achievements',
+                  onPressed: () => context.push('/achievements'),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
               right: 8,
               child: _ThemeToggle(mode: themeMode, ref: ref),
             ),

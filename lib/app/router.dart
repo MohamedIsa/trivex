@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/game_config.dart';
+import '../screens/achievements_screen.dart';
 import '../screens/game_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/loading_screen.dart';
@@ -38,6 +39,10 @@ final goRouter = GoRouter(
     GoRoute(
       path: '/result',
       builder: (_, _) => const ResultScreen(),
+    ),
+    GoRoute(
+      path: '/achievements',
+      builder: (_, _) => const AchievementsScreen(),
     ),
   ],
   errorBuilder: (_, state) => Scaffold(

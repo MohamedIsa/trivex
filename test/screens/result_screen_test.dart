@@ -9,6 +9,7 @@ import 'package:trivex/models/game_config.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
+import 'package:trivex/repositories/achievement_repository.dart';
 import 'package:trivex/repositories/elo_repository.dart';
 import 'package:trivex/repositories/question_cache_repository.dart';
 import 'package:trivex/screens/result_screen.dart';
@@ -61,6 +62,48 @@ class _FakeQuestionCacheRepository extends QuestionCacheRepository {
   Future<void> save(String key, List<String> questions) async {
     _store[key] = [...getSeenQuestions(key), ...questions];
   }
+}
+
+/// In-memory [AchievementRepository] — avoids Hive.
+/// Pre-populated with all achievements unlocked so no SnackBar toasts fire
+/// during existing ResultScreen tests.
+class _FakeAchievementRepository extends AchievementRepository {
+  final Set<String> _unlocked = {
+    'first_win',
+    'perfect_round',
+    'hot_streak',
+    'beat_hard',
+    'ten_games',
+    'speed_demon',
+    'polyglot',
+    'centurion',
+  };
+  final Map<String, DateTime> _dates = {};
+  int _winStreak = 0;
+  int _gamesPlayed = 0;
+
+  @override
+  Set<String> getUnlocked() => Set.of(_unlocked);
+
+  @override
+  Future<void> unlock(String id) async {
+    if (_unlocked.add(id)) _dates[id] = DateTime.now();
+  }
+
+  @override
+  DateTime? getUnlockDate(String id) => _dates[id];
+
+  @override
+  int getWinStreak() => _winStreak;
+
+  @override
+  Future<void> setWinStreak(int streak) async => _winStreak = streak;
+
+  @override
+  int getGamesPlayed() => _gamesPlayed;
+
+  @override
+  Future<void> incrementGamesPlayed() async => _gamesPlayed++;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,11 +201,13 @@ Future<ProviderContainer> _pumpResultScreen(
 
   final fakeRepo = _FakeEloRepository();
   final fakeCacheRepo = _FakeQuestionCacheRepository();
+  final fakeAchieveRepo = _FakeAchievementRepository();
 
   final container = ProviderContainer(
     overrides: [
       eloRepositoryProvider.overrideWithValue(fakeRepo),
       questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
+      achievementRepositoryProvider.overrideWithValue(fakeAchieveRepo),
       gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
       eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
     ],
@@ -334,12 +379,14 @@ void main() {
 
         final fakeRepo = _FakeEloRepository();
         final fakeCacheRepo = _FakeQuestionCacheRepository();
+        final fakeAchieveRepo = _FakeAchievementRepository();
         final state = _highScoreState();
 
         final container = ProviderContainer(
           overrides: [
             eloRepositoryProvider.overrideWithValue(fakeRepo),
             questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
+            achievementRepositoryProvider.overrideWithValue(fakeAchieveRepo),
             gameStateNotifierProvider
                 .overrideWith(() => _SeedableNotifier(state)),
             eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
@@ -492,11 +539,13 @@ Future<GoRouter> _pumpWithRouter(
 
   final fakeRepo = _FakeEloRepository();
   final fakeCacheRepo = _FakeQuestionCacheRepository();
+  final fakeAchieveRepo = _FakeAchievementRepository();
 
   final container = ProviderContainer(
     overrides: [
       eloRepositoryProvider.overrideWithValue(fakeRepo),
       questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
+      achievementRepositoryProvider.overrideWithValue(fakeAchieveRepo),
       gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
       eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
     ],

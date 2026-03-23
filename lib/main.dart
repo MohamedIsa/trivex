@@ -17,6 +17,7 @@ Future<void> main() async {
   await Hive.openBox('question_cache');
   await Hive.openBox('offline_questions');
   await Hive.openBox(kPrefsBoxName);
+  await Hive.openBox('achievements');
   runApp(const ProviderScope(child: MainApp()));
 }
 
