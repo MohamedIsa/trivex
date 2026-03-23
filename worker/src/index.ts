@@ -66,6 +66,18 @@ function errorResponse(error: string, retryable: boolean, status: number): Respo
 }
 
 // ---------------------------------------------------------------------------
+// Structured logging
+// ---------------------------------------------------------------------------
+
+/** Maximum topic length logged (privacy). */
+const LOG_TOPIC_MAX = 100;
+
+/** Emit a single structured JSON log line via console.log. */
+function log(fields: Record<string, unknown>): void {
+  console.log(JSON.stringify(fields));
+}
+
+// ---------------------------------------------------------------------------
 // Language auto-detection from topic text
 // ---------------------------------------------------------------------------
 
@@ -176,13 +188,19 @@ async function callWorkersAI(
   count: number,
   language: 'en' | 'ar',
   excludeQuestions: string[] = [],
+  requestId: string = '',
 ): Promise<Question[]> {
+  const prompt = buildUserPrompt(topic, difficulty, count, language, excludeQuestions);
+
+  log({ requestId, event: 'llm_start', model, promptLength: prompt.length });
+  const llmStart = Date.now();
+
   let aiResponse: unknown;
   try {
     aiResponse = await env.AI.run(model as Parameters<Ai['run']>[0], {
       messages: [
         { role: 'system', content: buildSystemPrompt(language) },
-        { role: 'user', content: buildUserPrompt(topic, difficulty, count, language, excludeQuestions) },
+        { role: 'user', content: prompt },
       ],
       max_tokens: 4096,
       response_format: { type: 'json_object' },
@@ -192,6 +210,8 @@ async function callWorkersAI(
   }
 
   const content = (aiResponse as WorkersAIResponse)?.response;
+
+  log({ requestId, event: 'llm_done', durationMs: Date.now() - llmStart, responseLength: content?.length ?? 0 });
 
   if (!content || typeof content !== 'string') {
     throw new LLMError('Empty or unexpected response from Workers AI', 502);
@@ -304,18 +324,23 @@ export default {
 // ---------------------------------------------------------------------------
 
 async function handleGenerate(request: Request, env: Env): Promise<Response> {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const requestStart = Date.now();
+
   try {
     // ── Parse + validate request body ───────────────────────────────────────
     let body: GenerateRequest;
     try {
       body = (await request.json()) as GenerateRequest;
     } catch {
+      log({ requestId, event: 'error', message: 'Invalid JSON in request body', statusCode: 400 });
       return errorResponse('Invalid JSON in request body', false, 400);
     }
 
     const { topic, difficulty, count } = body;
 
     if (!topic || typeof topic !== 'string' || topic.trim() === '') {
+      log({ requestId, event: 'error', message: 'Missing or empty topic', statusCode: 400 });
       return errorResponse('Missing or empty "topic" field', false, 400);
     }
 
@@ -331,6 +356,16 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
     // ── Auto-detect language from topic text ────────────────────
     const language = detectLanguage(topic.trim());
 
+    // ── Log: request received ─────────────────────────────────────────────
+    log({
+      requestId,
+      event: 'request',
+      topic: topic.trim().slice(0, LOG_TOPIC_MAX),
+      difficulty: normalizedDifficulty,
+      language,
+      count: safeCount,
+    });
+
     // ── Validate + cap excludeQuestions ──────────────────────────────────
     const rawExclude = Array.isArray(body.excludeQuestions) ? body.excludeQuestions : [];
     const excludeQuestions: string[] = rawExclude
@@ -341,27 +376,46 @@ async function handleGenerate(request: Request, env: Env): Promise<Response> {
     const model = env.LLM_MODEL ?? '@cf/meta/llama-3.1-8b-instruct-fast';
     const timeoutError = new LLMError('LLM API timeout', 504);
     const questions = await withTimeout(
-      callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount, language, excludeQuestions),
+      callWorkersAI(env, model, topic.trim(), normalizedDifficulty, safeCount, language, excludeQuestions, requestId),
       30000,
       timeoutError,
     );
 
     // ── Validate response shape ────────────────────────────────
-    if (!Array.isArray(questions) || questions.length !== safeCount || !questions.every(isValidQuestion)) {
+    const validQuestions = Array.isArray(questions) ? questions.filter(isValidQuestion) : [];
+    const received = Array.isArray(questions) ? questions.length : 0;
+    const valid = validQuestions.length;
+    const rejected = received - valid;
+
+    log({ requestId, event: 'validation', received, valid, rejected });
+
+    if (valid !== safeCount) {
+      log({ requestId, event: 'error', message: 'Invalid question format from LLM', statusCode: 422 });
       return errorResponse('Invalid question format from LLM', true, 422);
     }
 
-    const responseBody: GenerateResponse = { questions, language };
+    const responseBody: GenerateResponse = { questions: validQuestions, language };
+    const totalDurationMs = Date.now() - requestStart;
+    log({ requestId, event: 'response', statusCode: 200, totalDurationMs });
     return corsResponse(JSON.stringify(responseBody), 200);
   } catch (err) {
+    const totalDurationMs = Date.now() - requestStart;
     // Never let an unhandled error escape as a naked 500
     if (err instanceof LLMError) {
-      if (err.statusCode === 504) {
-        return errorResponse('LLM API timeout', true, 504);
-      }
-      return errorResponse('LLM API unavailable', true, 502);
+      const statusCode = err.statusCode === 504 ? 504 : 502;
+      const message = err.statusCode === 504 ? 'LLM API timeout' : 'LLM API unavailable';
+      log({ requestId, event: 'error', message, statusCode, totalDurationMs });
+      return errorResponse(message, true, statusCode);
     }
     const message = err instanceof Error ? err.message : 'Unexpected server error';
+    log({
+      requestId,
+      event: 'error',
+      message,
+      statusCode: 500,
+      rawResponse: String(err).slice(0, 200),
+      totalDurationMs,
+    });
     return errorResponse(message, true, 500);
   }
 }
