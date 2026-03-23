@@ -210,28 +210,32 @@ class ResultScreen extends HookConsumerWidget {
                           // 1 — Score cards
                           staggerWrap(
                             1,
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _ScoreCard(
-                                    label: 'You',
-                                    score: playerScore,
-                                    animation: scoreCtrl,
-                                    isWinner: isWin,
-                                    isTie: isTie,
+                            child: Semantics(
+                              label:
+                                  'Your score: $playerScore, Bot score: $botScore',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _ScoreCard(
+                                      label: 'You',
+                                      score: playerScore,
+                                      animation: scoreCtrl,
+                                      isWinner: isWin,
+                                      isTie: isTie,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _ScoreCard(
-                                    label: 'Bot',
-                                    score: botScore,
-                                    animation: scoreCtrl,
-                                    isWinner: !isWin && !isTie,
-                                    isTie: isTie,
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _ScoreCard(
+                                      label: 'Bot',
+                                      score: botScore,
+                                      animation: scoreCtrl,
+                                      isWinner: !isWin && !isTie,
+                                      isTie: isTie,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
 
@@ -300,8 +304,10 @@ class ResultScreen extends HookConsumerWidget {
                             5,
                             child: GestureDetector(
                               onTap: goHome,
-                              child: const SizedBox(
-                                height: 48,
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  minHeight: 48,
+                                ),
                                 child: Center(
                                   child: Text(
                                     'Home',
@@ -324,16 +330,18 @@ class ResultScreen extends HookConsumerWidget {
 
             // ── Confetti overlay (top-center) ───────────────────────────
             if (isWin && !isTie)
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConfettiWidget(
-                  confettiController: confettiCtrl,
-                  blastDirectionality: BlastDirectionality.explosive,
-                  numberOfParticles: 20,
-                  maxBlastForce: 30,
-                  minBlastForce: 10,
-                  gravity: 0.2,
-                  colors: const [AppColors.primary, AppColors.teal],
+              ExcludeSemantics(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: confettiCtrl,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    numberOfParticles: 20,
+                    maxBlastForce: 30,
+                    minBlastForce: 10,
+                    gravity: 0.2,
+                    colors: const [AppColors.primary, AppColors.teal],
+                  ),
                 ),
               ),
           ],

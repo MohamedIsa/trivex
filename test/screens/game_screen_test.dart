@@ -18,43 +18,38 @@ import 'package:trivex/widgets/reveal_bottom_sheet.dart';
 // ---------------------------------------------------------------------------
 
 Question _q(int i) => Question(
-      id: 'q$i',
-      question: 'Question $i',
-      options: ['Alpha', 'Bravo', 'Charlie', 'Delta'],
-      correctIndex: 0,
-      explanation: 'Because $i.',
-      timeLimit: 15,
-    );
+  id: 'q$i',
+  question: 'Question $i',
+  options: ['Alpha', 'Bravo', 'Charlie', 'Delta'],
+  correctIndex: 0,
+  explanation: 'Because $i.',
+  timeLimit: 15,
+);
 
 /// Question with very long answer options (~80 chars each).
 Question _longOptionQ() => Question(
-      id: 'qLong',
-      question:
-          'This is a deliberately verbose question that the AI might produce to test wrapping behaviour',
-      options: [
-        'A' * 80,
-        'B' * 80,
-        'C' * 80,
-        'D' * 80,
-      ],
-      correctIndex: 0,
-      explanation: 'Long option test.',
-      timeLimit: 15,
-    );
+  id: 'qLong',
+  question:
+      'This is a deliberately verbose question that the AI might produce to test wrapping behaviour',
+  options: ['A' * 80, 'B' * 80, 'C' * 80, 'D' * 80],
+  correctIndex: 0,
+  explanation: 'Long option test.',
+  timeLimit: 15,
+);
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
 GameState _initialGameState() => GameState(
-      questions: _tenQuestions(),
-      topic: 'Test',
-      difficulty: 'medium',
-      currentIndex: 0,
-      playerScore: 0,
-      botScore: 0,
-      selectedIndex: null,
-      isRevealing: false,
-      isGameOver: false,
-    );
+  questions: _tenQuestions(),
+  topic: 'Test',
+  difficulty: 'medium',
+  currentIndex: 0,
+  playerScore: 0,
+  botScore: 0,
+  selectedIndex: null,
+  isRevealing: false,
+  isGameOver: false,
+);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,9 +62,7 @@ Future<ProviderContainer> _pumpWithState(
   GameState state,
 ) async {
   final container = ProviderContainer(
-    overrides: [
-      gameStateNotifierProvider.overrideWith(GameStateNotifier.new),
-    ],
+    overrides: [gameStateNotifierProvider.overrideWith(GameStateNotifier.new)],
   );
 
   // Seed the notifier's state.
@@ -88,10 +81,7 @@ Future<ProviderContainer> _pumpWithState(
   final router = GoRouter(
     initialLocation: '/game',
     routes: [
-      GoRoute(
-        path: '/game',
-        builder: (_, _) => const GameScreen(),
-      ),
+      GoRoute(path: '/game', builder: (_, _) => const GameScreen()),
       GoRoute(
         path: '/result',
         builder: (_, _) => const Scaffold(body: Text('route: /result')),
@@ -116,7 +106,9 @@ Future<ProviderContainer> _pumpWithState(
 
 void main() {
   setUpAll(() async {
-    Hive.init('/tmp/hive_test_game_screen_${DateTime.now().millisecondsSinceEpoch}');
+    Hive.init(
+      '/tmp/hive_test_game_screen_${DateTime.now().millisecondsSinceEpoch}',
+    );
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(EloRecordAdapter());
     }
@@ -206,34 +198,35 @@ void main() {
 
     // ── Score row updates on new state ────────────────────────────────────
 
-    testWidgets(
-      'score row updates when state emits new playerScore',
-      (tester) async {
-        final container = await _pumpWithState(tester, _initialGameState());
-        await tester.pump();
+    testWidgets('score row updates when state emits new playerScore', (
+      tester,
+    ) async {
+      final container = await _pumpWithState(tester, _initialGameState());
+      await tester.pump();
 
-        // Initial score.
-        expect(find.text('You 0'), findsOneWidget);
+      // Initial score.
+      expect(find.text('You 0'), findsOneWidget);
 
-        // Tap correct answer (index 0) to get some points.
-        await tester.tap(find.text('Alpha'));
-        await tester.pump();
+      // Tap correct answer (index 0) to get some points.
+      await tester.tap(find.text('Alpha'));
+      await tester.pump();
 
-        final state = container.read(gameStateNotifierProvider);
-        expect(state.playerScore, greaterThan(0));
+      final state = container.read(gameStateNotifierProvider);
+      expect(state.playerScore, greaterThan(0));
 
-        // The score text should update.
-        expect(find.text('You ${state.playerScore}'), findsOneWidget);
-      },
-    );
+      // The score text should update.
+      expect(find.text('You ${state.playerScore}'), findsOneWidget);
+    });
 
     // ── Long answer text — no overflow ──────────────────────────────────
 
     testWidgets(
       'long answer options (80 chars each) — all 4 tiles render, no overflow',
       (tester) async {
-        final longQuestions =
-            List.generate(10, (i) => i == 0 ? _longOptionQ() : _q(i + 1));
+        final longQuestions = List.generate(
+          10,
+          (i) => i == 0 ? _longOptionQ() : _q(i + 1),
+        );
         final longState = GameState(
           questions: longQuestions,
           topic: 'Test',
@@ -265,31 +258,30 @@ void main() {
 
     // ── Haptic feedback — mediumImpact on tap ─────────────────────────────
 
-    testWidgets(
-      'tap answer — HapticFeedback.mediumImpact is invoked',
-      (tester) async {
-        final hapticCalls = <String>[];
+    testWidgets('tap answer — HapticFeedback.mediumImpact is invoked', (
+      tester,
+    ) async {
+      final hapticCalls = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'HapticFeedback.vibrate') {
+              hapticCalls.add(call.arguments as String);
+            }
+            return null;
+          });
+      addTearDown(() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-          if (call.method == 'HapticFeedback.vibrate') {
-            hapticCalls.add(call.arguments as String);
-          }
-          return null;
-        });
-        addTearDown(() {
-          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-              .setMockMethodCallHandler(SystemChannels.platform, null);
-        });
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
 
-        await _pumpWithState(tester, _initialGameState());
-        await tester.pump();
+      await _pumpWithState(tester, _initialGameState());
+      await tester.pump();
 
-        await tester.tap(find.text('Alpha'));
-        await tester.pump();
+      await tester.tap(find.text('Alpha'));
+      await tester.pump();
 
-        expect(hapticCalls, contains('HapticFeedbackType.mediumImpact'));
-      },
-    );
+      expect(hapticCalls, contains('HapticFeedbackType.mediumImpact'));
+    });
 
     // ── Shake animation — wrong answer triggers Transform.translate ───────
 
@@ -321,6 +313,51 @@ void main() {
           return dx != 0.0;
         });
         expect(hasHorizontalShake, isTrue);
+      },
+    );
+
+    // ── Accessibility — answer tile has Semantics label ───────────────────
+
+    testWidgets(
+      'answer tile renders with correct Semantics label including option text',
+      (tester) async {
+        await _pumpWithState(tester, _initialGameState());
+        await tester.pump();
+
+        // Each answer tile should have a Semantics node with
+        // "Option {letter}: {text}".
+        expect(
+          find.bySemanticsLabel(RegExp(r'Option A: Alpha')),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(r'Option B: Bravo')),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(r'Option C: Charlie')),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(r'Option D: Delta')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    // ── Accessibility — timer bar has Semantics label with seconds ────────
+
+    testWidgets(
+      'timer bar renders with Semantics label containing seconds value',
+      (tester) async {
+        await _pumpWithState(tester, _initialGameState());
+        await tester.pump();
+
+        // Timer bar should have a semantics label with "Time remaining: N seconds".
+        expect(
+          find.bySemanticsLabel(RegExp(r'Time remaining: \d+ seconds')),
+          findsOneWidget,
+        );
       },
     );
   });

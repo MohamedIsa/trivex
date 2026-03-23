@@ -28,15 +28,17 @@ class LoadingScreen extends HookConsumerWidget {
 
     final pulseCtrl = useAnimationController(duration: kWordmarkPulse);
     final pulseOpacity = useMemoized(
-      () => Tween<double>(begin: 1.0, end: 0.6).animate(
-        CurvedAnimation(parent: pulseCtrl, curve: kPulseCurve),
-      ),
+      () => Tween<double>(
+        begin: 1.0,
+        end: 0.6,
+      ).animate(CurvedAnimation(parent: pulseCtrl, curve: kPulseCurve)),
       [pulseCtrl],
     );
     final pulseScale = useMemoized(
-      () => Tween<double>(begin: 1.0, end: 0.98).animate(
-        CurvedAnimation(parent: pulseCtrl, curve: kPulseCurve),
-      ),
+      () => Tween<double>(
+        begin: 1.0,
+        end: 0.98,
+      ).animate(CurvedAnimation(parent: pulseCtrl, curve: kPulseCurve)),
       [pulseCtrl],
     );
 
@@ -247,14 +249,18 @@ Widget _buildLoading({
       const SizedBox(height: 48),
 
       // Cancel.
-      GestureDetector(
-        onTap: onCancel,
-        child: const SizedBox(
-          height: 48,
-          child: Center(
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.muted, fontSize: 16),
+      Semantics(
+        label: 'Cancel loading',
+        button: true,
+        child: GestureDetector(
+          onTap: onCancel,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: const Center(
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.muted, fontSize: 16),
+              ),
             ),
           ),
         ),
@@ -305,23 +311,27 @@ Widget _buildError({
       const SizedBox(height: 32),
 
       // Try Again.
-      GestureDetector(
-        onTap: onRetry,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(kButtonRadius),
-            boxShadow: [AppShadows.primaryGlow],
-          ),
-          alignment: Alignment.center,
-          child: const Text(
-            'Try Again',
-            style: TextStyle(
-              color: AppColors.foreground,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+      Semantics(
+        label: 'Try Again',
+        button: true,
+        child: GestureDetector(
+          onTap: onRetry,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(kButtonRadius),
+              boxShadow: [AppShadows.primaryGlow],
+            ),
+            alignment: Alignment.center,
+            child: const Text(
+              'Try Again',
+              style: TextStyle(
+                color: AppColors.foreground,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -329,14 +339,18 @@ Widget _buildError({
       const SizedBox(height: 16),
 
       // Cancel.
-      GestureDetector(
-        onTap: onCancel,
-        child: const SizedBox(
-          height: 48,
-          child: Center(
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.muted, fontSize: 16),
+      Semantics(
+        label: 'Cancel',
+        button: true,
+        child: GestureDetector(
+          onTap: onCancel,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: const Center(
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.muted, fontSize: 16),
+              ),
             ),
           ),
         ),

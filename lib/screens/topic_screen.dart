@@ -56,8 +56,7 @@ class TopicScreen extends HookWidget {
       if (selectedCategory.value != null) {
         return kCategories[selectedCategory.value!].label;
       }
-      if (customSelected.value &&
-          customTopicCtrl.text.trim().isNotEmpty) {
+      if (customSelected.value && customTopicCtrl.text.trim().isNotEmpty) {
         return customTopicCtrl.text.trim();
       }
       return null;
@@ -101,6 +100,7 @@ class TopicScreen extends HookWidget {
                     height: kMinTapTarget,
                     child: IconButton(
                       padding: EdgeInsets.zero,
+                      tooltip: 'Go back',
                       icon: const Icon(
                         Icons.arrow_back,
                         color: AppColors.foreground,
@@ -143,7 +143,8 @@ class TopicScreen extends HookWidget {
                                 _CategoryChip(
                                   emoji: kCategories[i].emoji,
                                   label: kCategories[i].label,
-                                  selected: selectedCategory.value == i &&
+                                  selected:
+                                      selectedCategory.value == i &&
                                       !customSelected.value,
                                   onTap: () {
                                     selectedCategory.value = i;
@@ -179,21 +180,25 @@ class TopicScreen extends HookWidget {
                                 filled: true,
                                 fillColor: AppColors.background,
                                 hintText: 'e.g. The Roman Empire',
-                                hintStyle:
-                                    TextStyle(color: AppColors.mutedHalf),
+                                hintStyle: TextStyle(
+                                  color: AppColors.mutedHalf,
+                                ),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 16,
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(kButtonRadius),
-                                  borderSide:
-                                      BorderSide(color: AppColors.mutedSubtle),
+                                  borderRadius: BorderRadius.circular(
+                                    kButtonRadius,
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: AppColors.mutedSubtle,
+                                  ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.circular(kButtonRadius),
+                                  borderRadius: BorderRadius.circular(
+                                    kButtonRadius,
+                                  ),
                                   borderSide: const BorderSide(
                                     color: AppColors.primary,
                                     width: 2,
@@ -233,13 +238,16 @@ class TopicScreen extends HookWidget {
                           // ── Question count pills ──────────────────────
                           Row(
                             children: [
-                              for (int i = 0;
-                                  i < kQuestionCountOptions.length;
-                                  i++) ...[
+                              for (
+                                int i = 0;
+                                i < kQuestionCountOptions.length;
+                                i++
+                              ) ...[
                                 if (i > 0) const SizedBox(width: 12),
                                 _DifficultyPill(
                                   label: '${kQuestionCountOptions[i]}',
-                                  selected: questionCount.value ==
+                                  selected:
+                                      questionCount.value ==
                                       kQuestionCountOptions[i],
                                   onTap: () => questionCount.value =
                                       kQuestionCountOptions[i],
@@ -365,24 +373,28 @@ class _StartButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: enabled ? onTap : null,
-      child: AnimatedContainer(
-        duration: kButtonTransition,
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: enabled ? AppColors.primary : AppColors.card,
-          borderRadius: BorderRadius.circular(kButtonRadius),
-          boxShadow: enabled ? [AppShadows.primaryGlow] : null,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          'Start',
-          style: TextStyle(
-            color: enabled ? AppColors.foreground : AppColors.mutedSubtle,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return Semantics(
+      label: enabled ? 'Start game' : 'Start game, disabled',
+      button: true,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: AnimatedContainer(
+          duration: kButtonTransition,
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: enabled ? AppColors.primary : AppColors.card,
+            borderRadius: BorderRadius.circular(kButtonRadius),
+            boxShadow: enabled ? [AppShadows.primaryGlow] : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            'Start',
+            style: TextStyle(
+              color: enabled ? AppColors.foreground : AppColors.mutedSubtle,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

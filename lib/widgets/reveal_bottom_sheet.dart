@@ -31,9 +31,7 @@ class RevealBottomSheet extends HookConsumerWidget {
       () => Tween<Offset>(
         begin: const Offset(0, 1), // fully off-screen below
         end: Offset.zero,
-      ).animate(
-        CurvedAnimation(parent: slideController, curve: kSpringCurve),
-      ),
+      ).animate(CurvedAnimation(parent: slideController, curve: kSpringCurve)),
       [slideController],
     );
 
@@ -67,9 +65,7 @@ class RevealBottomSheet extends HookConsumerWidget {
           if (context.mounted) context.pushReplacement('/result');
         } else {
           timerController.restart(
-            duration: Duration(
-              seconds: newState.currentQuestion.timeLimit,
-            ),
+            duration: Duration(seconds: newState.currentQuestion.timeLimit),
           );
         }
       }
@@ -105,14 +101,16 @@ class RevealBottomSheet extends HookConsumerWidget {
         return Stack(
           children: [
             // ── Backdrop ──────────────────────────────────────────────────
-            GestureDetector(
-              onTap: () {}, // absorb taps — do NOT dismiss
-              child: FadeTransition(
-                opacity: slideController,
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                    child: Container(color: AppColors.backdropOverlay),
+            ExcludeSemantics(
+              child: GestureDetector(
+                onTap: () {}, // absorb taps — do NOT dismiss
+                child: FadeTransition(
+                  opacity: slideController,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                      child: Container(color: AppColors.backdropOverlay),
+                    ),
                   ),
                 ),
               ),
@@ -164,15 +162,16 @@ class _SheetPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(gameStateNotifierProvider);
 
-    final isCorrect = state.selectedIndex != null &&
+    final isCorrect =
+        state.selectedIndex != null &&
         state.selectedIndex == state.currentQuestion.correctIndex;
     final isTimeout = state.selectedIndex == null;
     final accentColor = isCorrect ? AppColors.teal : AppColors.red;
     final heading = isTimeout
         ? "Time's Up!"
         : isCorrect
-            ? 'Correct!'
-            : 'Wrong!';
+        ? 'Correct!'
+        : 'Wrong!';
 
     final correctIdx = state.currentQuestion.correctIndex;
     final correctLetter = String.fromCharCode(65 + correctIdx);
@@ -184,109 +183,125 @@ class _SheetPanel extends ConsumerWidget {
     return Directionality(
       textDirection: textDirection,
       child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        kCardPadding,
-        kCardPadding,
-        kCardPadding,
-        32,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(kCardPadding)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Result icon ──────────────────────────────────────────────────
-          Container(
-            width: kResultIconSize,
-            height: kResultIconSize,
-            decoration: BoxDecoration(
-              color: accentColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isCorrect ? Icons.check : Icons.close,
-              color: Colors.white,
-              size: kIconSize,
-            ),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(
+          kCardPadding,
+          kCardPadding,
+          kCardPadding,
+          32,
+        ),
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(kCardPadding),
           ),
-
-          const SizedBox(height: 16),
-
-          // ── Heading ──────────────────────────────────────────────────────
-          Text(
-            heading,
-            style: TextStyle(
-              color: accentColor,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // ── Explanation box ──────────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.all(Radius.circular(kButtonRadius)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Correct: $correctLetter',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  state.currentQuestion.explanation,
-                  style: const TextStyle(
-                    color: AppColors.foreground,
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // ── Next / Results button ────────────────────────────────────────
-          GestureDetector(
-            onTapDown: (_) => onNextTapDown(),
-            onTapUp: (_) => onNextTapUp(),
-            onTapCancel: onNextTapCancel,
-            child: AnimatedScale(
-              scale: isNextPressed ? 0.98 : 1.0,
-              duration: kTapScale,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Result icon ──────────────────────────────────────────────────
+            Semantics(
+              label: isCorrect
+                  ? 'Correct'
+                  : isTimeout
+                  ? 'Time expired'
+                  : 'Wrong',
               child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                width: kResultIconSize,
+                height: kResultIconSize,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(kButtonRadius),
-                  boxShadow: [AppShadows.primaryGlow],
+                  color: accentColor,
+                  shape: BoxShape.circle,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  isLastQuestion ? 'Results' : 'Next →',
-                  style: const TextStyle(
-                    color: AppColors.foreground,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                child: Icon(
+                  isCorrect ? Icons.check : Icons.close,
+                  color: Colors.white,
+                  size: kIconSize,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ── Heading ──────────────────────────────────────────────────────
+            Text(
+              heading,
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Explanation box ──────────────────────────────────────────────
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.all(Radius.circular(kButtonRadius)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Correct: $correctLetter',
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.currentQuestion.explanation,
+                    style: const TextStyle(
+                      color: AppColors.foreground,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── Next / Results button ────────────────────────────────────────
+            Semantics(
+              label: isLastQuestion ? 'Results' : 'Next question',
+              button: true,
+              child: GestureDetector(
+                onTapDown: (_) => onNextTapDown(),
+                onTapUp: (_) => onNextTapUp(),
+                onTapCancel: onNextTapCancel,
+                child: AnimatedScale(
+                  scale: isNextPressed ? 0.98 : 1.0,
+                  duration: kTapScale,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(kButtonRadius),
+                      boxShadow: [AppShadows.primaryGlow],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      isLastQuestion ? 'Results' : 'Next →',
+                      style: const TextStyle(
+                        color: AppColors.foreground,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

@@ -112,55 +112,57 @@ Widget _buildContent(
   required Animation<double> buttonFade,
   required Animation<Offset> buttonSlide,
 }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: kScreenPaddingH,
-        vertical: kScreenPaddingH,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Wordmark ──────────────────────────────────────────────────
-          FadeTransition(
-            opacity: wordmarkFade,
-            child: SlideTransition(
-              position: wordmarkSlide,
-              child: RichText(
-                text: const TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Triv',
-                      style: TextStyle(
-                        color: AppColors.foreground,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+  return Padding(
+    padding: const EdgeInsets.symmetric(
+      horizontal: kScreenPaddingH,
+      vertical: kScreenPaddingH,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Wordmark ──────────────────────────────────────────────────
+        FadeTransition(
+          opacity: wordmarkFade,
+          child: SlideTransition(
+            position: wordmarkSlide,
+            child: RichText(
+              text: const TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Triv',
+                    style: TextStyle(
+                      color: AppColors.foreground,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    TextSpan(
-                      text: 'ex',
-                      style: TextStyle(
-                        color: AppColors.teal,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  TextSpan(
+                    text: 'ex',
+                    style: TextStyle(
+                      color: AppColors.teal,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
+        ),
 
-          const Spacer(),
+        const Spacer(),
 
-          // ── ELO group ─────────────────────────────────────────────────
-          FadeTransition(
-            opacity: eloFade,
-            child: SlideTransition(
-              position: eloSlide,
-              child: Column(
-                children: [
-                  // ELO number
-                  Center(
+        // ── ELO group ─────────────────────────────────────────────────
+        FadeTransition(
+          opacity: eloFade,
+          child: SlideTransition(
+            position: eloSlide,
+            child: Column(
+              children: [
+                // ELO number
+                Semantics(
+                  label: 'Your rating: $rating',
+                  child: Center(
                     child: Text(
                       '$rating',
                       style: const TextStyle(
@@ -170,37 +172,46 @@ Widget _buildContent(
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                ),
+                const SizedBox(height: 4),
 
-                  // "Your Rating" label
-                  const Center(
+                // "Your Rating" label
+                const ExcludeSemantics(
+                  child: Center(
                     child: Text(
                       'Your Rating',
                       style: TextStyle(color: AppColors.muted, fontSize: 16),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
 
-                  // Sparkline
-                  const SizedBox(
+                // Sparkline
+                Semantics(
+                  label: 'ELO history chart',
+                  child: const SizedBox(
                     height: 96,
                     width: double.infinity,
                     child: RepaintBoundary(child: EloSparkline()),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        ),
 
-          const Spacer(),
+        const Spacer(),
 
-          // ── Play button ───────────────────────────────────────────────
-          FadeTransition(
-            opacity: buttonFade,
-            child: SlideTransition(
-              position: buttonSlide,
-              child: GestureDetector(
-                onTap: () => context.push('/topic'),
+        // ── Play button ───────────────────────────────────────────────
+        FadeTransition(
+          opacity: buttonFade,
+          child: SlideTransition(
+            position: buttonSlide,
+            child: GestureDetector(
+              onTap: () => context.push('/topic'),
+              child: Semantics(
+                label: 'Play',
+                button: true,
                 child: Container(
                   width: double.infinity,
                   constraints: const BoxConstraints(minHeight: kMinTapTarget),
@@ -223,7 +234,8 @@ Widget _buildContent(
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}

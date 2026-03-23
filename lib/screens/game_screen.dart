@@ -158,37 +158,45 @@ class _TopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Q ${state.currentIndex + 1} / ${state.questions.length}',
-            style: const TextStyle(
-              color: AppColors.foreground,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+          Semantics(
+            label:
+                'Question ${state.currentIndex + 1} of ${state.questions.length}',
+            child: Text(
+              'Q ${state.currentIndex + 1} / ${state.questions.length}',
+              style: const TextStyle(
+                color: AppColors.foreground,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          Row(
-            children: [
-              Text(
-                'You ${state.playerScore}',
-                style: const TextStyle(
-                  color: AppColors.foreground,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+          Semantics(
+            label:
+                'Your score: ${state.playerScore}, Bot score: ${state.botScore}',
+            child: Row(
+              children: [
+                Text(
+                  'You ${state.playerScore}',
+                  style: const TextStyle(
+                    color: AppColors.foreground,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const Text(
-                ' · ',
-                style: TextStyle(color: AppColors.muted, fontSize: 14),
-              ),
-              Text(
-                'Bot ${state.botScore}',
-                style: const TextStyle(
-                  color: AppColors.foreground,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                const Text(
+                  ' · ',
+                  style: TextStyle(color: AppColors.muted, fontSize: 14),
                 ),
-              ),
-            ],
+                Text(
+                  'Bot ${state.botScore}',
+                  style: const TextStyle(
+                    color: AppColors.foreground,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -226,17 +234,21 @@ class _TimerBar extends StatelessWidget {
         animation: controller,
         builder: (_, _) {
           final remaining = 1.0 - controller.value;
-          return SizedBox(
-            height: kTimerBarHeight,
-            width: double.infinity,
-            child: Stack(
-              children: [
-                Container(color: AppColors.card),
-                FractionallySizedBox(
-                  widthFactor: remaining,
-                  child: Container(color: _barColor(remaining)),
-                ),
-              ],
+          final seconds = (remaining * controller.duration!.inSeconds).ceil();
+          return Semantics(
+            label: 'Time remaining: $seconds seconds',
+            child: SizedBox(
+              height: kTimerBarHeight,
+              width: double.infinity,
+              child: Stack(
+                children: [
+                  Container(color: AppColors.card),
+                  FractionallySizedBox(
+                    widthFactor: remaining,
+                    child: Container(color: _barColor(remaining)),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -416,57 +428,62 @@ class _AnswerTile extends HookWidget {
     // ── Scale on tap ────────────────────────────────────────────────────
     final scale = (!state.isRevealing && isPressed) ? 0.98 : 1.0;
 
-    return GestureDetector(
-      onTapDown: (_) => onTapDown(),
-      onTapUp: (_) => onTapUp(),
-      onTapCancel: onTapCancel,
-      child: AnimatedScale(
-        scale: scale,
-        duration: kTapScale,
-        child: AnimatedBuilder(
-          animation: shakeOffset,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(shakeOffset.value, 0),
-            child: child,
-          ),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: kMinTapTarget),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(kCardRadius),
-              border: Border.all(color: borderColor),
+    return Semantics(
+      label:
+          'Option ${_labels[index]}: ${state.currentQuestion.options[index]}',
+      button: true,
+      child: GestureDetector(
+        onTapDown: (_) => onTapDown(),
+        onTapUp: (_) => onTapUp(),
+        onTapCancel: onTapCancel,
+        child: AnimatedScale(
+          scale: scale,
+          duration: kTapScale,
+          child: AnimatedBuilder(
+            animation: shakeOffset,
+            builder: (_, child) => Transform.translate(
+              offset: Offset(shakeOffset.value, 0),
+              child: child,
             ),
-            child: Row(
-              children: [
-                // Badge
-                Container(
-                  width: kBadgeSize,
-                  height: kBadgeSize,
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _labels[index],
-                    style: TextStyle(
-                      color: badgeTextColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: kMinTapTarget),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(kCardRadius),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                children: [
+                  // Badge
+                  Container(
+                    width: kBadgeSize,
+                    height: kBadgeSize,
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _labels[index],
+                      style: TextStyle(
+                        color: badgeTextColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Option text
-                Expanded(
-                  child: Text(
-                    state.currentQuestion.options[index],
-                    softWrap: true,
-                    style: TextStyle(color: textColor, fontSize: 16),
+                  const SizedBox(width: 12),
+                  // Option text
+                  Expanded(
+                    child: Text(
+                      state.currentQuestion.options[index],
+                      softWrap: true,
+                      style: TextStyle(color: textColor, fontSize: 16),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
