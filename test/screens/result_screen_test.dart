@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,6 +119,22 @@ GameState _highScoreState() {
     currentIndex: 9,
     playerScore: 1450,
     botScore: 0,
+    selectedIndex: 0,
+    isRevealing: false,
+    isGameOver: true,
+    eloResult: elo,
+  );
+}
+
+GameState _drawState() {
+  final elo = EloService.calculate(1000, true);
+  return GameState(
+    questions: _tenQuestions(),
+    topic: 'Test',
+    difficulty: 'medium',
+    currentIndex: 9,
+    playerScore: 300,
+    botScore: 300,
     selectedIndex: 0,
     isRevealing: false,
     isGameOver: true,
@@ -406,6 +423,56 @@ void main() {
         expect(config.topic, 'Test');
         expect(config.difficulty, 'medium');
         expect(config.count, 10);
+      },
+    );
+
+    // ── Confetti fires on win ─────────────────────────────────────────────
+
+    testWidgets(
+      'player wins — ConfettiWidget is in the tree',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _winState());
+
+        expect(find.byType(ConfettiWidget), findsOneWidget);
+      },
+    );
+
+    // ── No confetti on loss ───────────────────────────────────────────────
+
+    testWidgets(
+      'player loses — no ConfettiWidget in the tree',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _loseState());
+
+        expect(find.byType(ConfettiWidget), findsNothing);
+      },
+    );
+
+    // ── No confetti on draw ───────────────────────────────────────────────
+
+    testWidgets(
+      'draw — no ConfettiWidget in the tree',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _drawState());
+
+        expect(find.byType(ConfettiWidget), findsNothing);
+      },
+    );
+
+    // ── Score counter starts at 0, reaches final value after animation ────
+
+    testWidgets(
+      'score counter animates from 0 to final value',
+      (tester) async {
+        await _pumpResultScreen(tester, state: _winState());
+
+        // After full stagger + score animation, we should see final scores.
+        // Advance past the score counter animation (800ms).
+        await tester.pump(const Duration(milliseconds: 900));
+
+        // Final scores should be visible.
+        expect(find.text('500'), findsOneWidget);
+        expect(find.text('200'), findsOneWidget);
       },
     );
   });

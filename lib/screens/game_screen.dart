@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_state.dart';
@@ -32,6 +34,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   void _onTileTap(int index, GameState state) {
     if (state.isRevealing || state.isGameOver) return;
 
+    // Haptic on answer selection.
+    HapticFeedback.mediumImpact();
+
     final controller = _timerController.controller;
     final remaining = controller != null
         ? ((1.0 - controller.value) * state.currentQuestion.timeLimit).round()
@@ -63,66 +68,66 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       child: Directionality(
         textDirection: textDirection,
         child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              // ── Game content layer ────────────────────────────────────────
-              Column(
-                children: [
-                  // ── Top bar ──────────────────────────────────────────────
-                  _TopBar(state: state),
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                // ── Game content layer ────────────────────────────────────────
+                Column(
+                  children: [
+                    // ── Top bar ──────────────────────────────────────────────
+                    _TopBar(state: state),
 
-                  // ── Timer bar ────────────────────────────────────────────
-                  GameTimer(
-                    timerController: _timerController,
-                    duration: Duration(
-                      seconds: state.currentQuestion.timeLimit,
-                    ),
-                  ),
-                  _TimerBar(timerController: _timerController),
-
-                  // ── Question + Tiles (scrollable) ─────────────────────────
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: kScreenPaddingH,
-                        vertical: kScreenPaddingH,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Question text — slides in on each new question.
-                          _QuestionText(state: state),
-
-                          const SizedBox(height: 32),
-
-                          // Answer tiles
-                          _AnswerTileList(
-                            state: state,
-                            pressedIndex: _pressedIndex,
-                            onTapDown: (i) =>
-                                setState(() => _pressedIndex = i),
-                            onTapUp: (i) {
-                              setState(() => _pressedIndex = null);
-                              _onTileTap(i, state);
-                            },
-                            onTapCancel: () =>
-                                setState(() => _pressedIndex = null),
-                          ),
-                        ],
+                    // ── Timer bar ────────────────────────────────────────────
+                    GameTimer(
+                      timerController: _timerController,
+                      duration: Duration(
+                        seconds: state.currentQuestion.timeLimit,
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    _TimerBar(timerController: _timerController),
 
-              // ── Reveal overlay ────────────────────────────────────────────────
-              RevealBottomSheet(timerController: _timerController),
-            ],
+                    // ── Question + Tiles (scrollable) ─────────────────────────
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: kScreenPaddingH,
+                          vertical: kScreenPaddingH,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Question text — slides in on each new question.
+                            _QuestionText(state: state),
+
+                            const SizedBox(height: 32),
+
+                            // Answer tiles
+                            _AnswerTileList(
+                              state: state,
+                              pressedIndex: _pressedIndex,
+                              onTapDown: (i) =>
+                                  setState(() => _pressedIndex = i),
+                              onTapUp: (i) {
+                                setState(() => _pressedIndex = null);
+                                _onTileTap(i, state);
+                              },
+                              onTapCancel: () =>
+                                  setState(() => _pressedIndex = null),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // ── Reveal overlay ────────────────────────────────────────────────
+                RevealBottomSheet(timerController: _timerController),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -258,10 +263,7 @@ class _QuestionText extends StatelessWidget {
         ).animate(animation);
         return FadeTransition(
           opacity: animation,
-          child: SlideTransition(
-            position: offsetAnimation,
-            child: child,
-          ),
+          child: SlideTransition(position: offsetAnimation, child: child),
         );
       },
       child: AnimatedOpacity(
@@ -325,7 +327,7 @@ class _AnswerTileList extends StatelessWidget {
 
 // ── Answer tile ─────────────────────────────────────────────────────────────
 
-class _AnswerTile extends StatelessWidget {
+class _AnswerTile extends HookWidget {
   const _AnswerTile({
     required this.index,
     required this.state,
@@ -348,6 +350,35 @@ class _AnswerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCorrectTile = index == state.currentQuestion.correctIndex;
     final isSelectedWrong = state.selectedIndex == index && !isCorrectTile;
+
+    // ── Shake animation for wrong answer ────────────────────────────────
+    final shakeCtrl = useAnimationController(duration: kShakeDuration);
+    final shakeOffset = useMemoized(
+      () => TweenSequence<double>([
+        TweenSequenceItem(tween: Tween(begin: 0, end: -6), weight: 1),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 6, end: -6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: -6, end: 6), weight: 2),
+        TweenSequenceItem(tween: Tween(begin: 6, end: 0), weight: 1),
+      ]).animate(CurvedAnimation(parent: shakeCtrl, curve: Curves.easeInOut)),
+      [shakeCtrl],
+    );
+
+    // Trigger shake + haptic when this tile is the selected-wrong tile on
+    // reveal. Only fire once per reveal (check controller is dismissed).
+    useEffect(() {
+      if (state.isRevealing && isSelectedWrong && shakeCtrl.isDismissed) {
+        HapticFeedback.lightImpact();
+        shakeCtrl.forward(from: 0);
+      }
+      if (state.isRevealing &&
+          isCorrectTile &&
+          state.selectedIndex != null &&
+          state.selectedIndex == state.currentQuestion.correctIndex) {
+        HapticFeedback.heavyImpact();
+      }
+      return null;
+    }, [state.isRevealing, state.currentIndex]);
 
     // ── Resolve reveal colours ──────────────────────────────────────────
     Color bg;
@@ -392,44 +423,51 @@ class _AnswerTile extends StatelessWidget {
       child: AnimatedScale(
         scale: scale,
         duration: kTapScale,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: kMinTapTarget),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(kCardRadius),
-            border: Border.all(color: borderColor),
+        child: AnimatedBuilder(
+          animation: shakeOffset,
+          builder: (_, child) => Transform.translate(
+            offset: Offset(shakeOffset.value, 0),
+            child: child,
           ),
-          child: Row(
-            children: [
-              // Badge
-              Container(
-                width: kBadgeSize,
-                height: kBadgeSize,
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  _labels[index],
-                  style: TextStyle(
-                    color: badgeTextColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: kMinTapTarget),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(kCardRadius),
+              border: Border.all(color: borderColor),
+            ),
+            child: Row(
+              children: [
+                // Badge
+                Container(
+                  width: kBadgeSize,
+                  height: kBadgeSize,
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _labels[index],
+                    style: TextStyle(
+                      color: badgeTextColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              // Option text
-              Expanded(
-                child: Text(
-                  state.currentQuestion.options[index],
-                  softWrap: true,
-                  style: TextStyle(color: textColor, fontSize: 16),
+                const SizedBox(width: 12),
+                // Option text
+                Expanded(
+                  child: Text(
+                    state.currentQuestion.options[index],
+                    softWrap: true,
+                    style: TextStyle(color: textColor, fontSize: 16),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

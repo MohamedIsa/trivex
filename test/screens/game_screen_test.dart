@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -259,6 +260,67 @@ void main() {
         expect(find.text('B' * 80), findsOneWidget);
         expect(find.text('C' * 80), findsOneWidget);
         expect(find.text('D' * 80), findsOneWidget);
+      },
+    );
+
+    // ── Haptic feedback — mediumImpact on tap ─────────────────────────────
+
+    testWidgets(
+      'tap answer — HapticFeedback.mediumImpact is invoked',
+      (tester) async {
+        final hapticCalls = <String>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'HapticFeedback.vibrate') {
+            hapticCalls.add(call.arguments as String);
+          }
+          return null;
+        });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(SystemChannels.platform, null);
+        });
+
+        await _pumpWithState(tester, _initialGameState());
+        await tester.pump();
+
+        await tester.tap(find.text('Alpha'));
+        await tester.pump();
+
+        expect(hapticCalls, contains('HapticFeedbackType.mediumImpact'));
+      },
+    );
+
+    // ── Shake animation — wrong answer triggers Transform.translate ───────
+
+    testWidgets(
+      'wrong answer — shake Transform.translate present during reveal',
+      (tester) async {
+        // Use a question where correct = 0, then tap index 1 (wrong).
+        final container = await _pumpWithState(tester, _initialGameState());
+        await tester.pump();
+
+        // Tap the wrong answer 'Bravo' (index 1, correct is 0).
+        await tester.tap(find.text('Bravo'));
+        await tester.pump();
+        // Advance past shake animation start.
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final state = container.read(gameStateNotifierProvider);
+        expect(state.isRevealing, isTrue);
+        expect(state.selectedIndex, 1); // wrong
+
+        // A Transform widget with a non-zero horizontal offset should exist
+        // from the shake animation on the selected-wrong tile.
+        final transforms = tester
+            .widgetList<Transform>(find.byType(Transform))
+            .toList();
+        final hasHorizontalShake = transforms.any((t) {
+          // Transform.translate uses a Matrix4 with [0][3] = dx.
+          final dx = t.transform.entry(0, 3);
+          return dx != 0.0;
+        });
+        expect(hasHorizontalShake, isTrue);
       },
     );
   });

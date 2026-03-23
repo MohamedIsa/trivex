@@ -19,6 +19,7 @@ dependencies:
   hive: ^2.2.3
   http: ^1.2.2
   fl_chart: ^0.70.2
+  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:

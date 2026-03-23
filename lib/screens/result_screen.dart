@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
@@ -57,6 +58,25 @@ class ResultScreen extends HookConsumerWidget {
       return null;
     }, const []);
 
+    // ── Score counter animations ────────────────────────────────────────────
+
+    final scoreCtrl = useAnimationController(duration: kScoreCountDuration);
+
+    useEffect(() {
+      // Start after the score-card stagger slot (index 1) has fired.
+      Future.delayed(kEntryStagger * 2, () {
+        if (context.mounted) scoreCtrl.forward();
+      });
+      return null;
+    }, const []);
+
+    // ── Confetti controller (player win only) ───────────────────────────────
+
+    final confettiCtrl = useMemoized(
+      () => ConfettiController(duration: kConfettiDuration),
+    );
+    useEffect(() => confettiCtrl.dispose, const []);
+
     // ── ELO persistence (runs once on mount) ────────────────────────────────
 
     final previousElo = useRef(1000);
@@ -80,8 +100,7 @@ class ResultScreen extends HookConsumerWidget {
         difficulty: state.difficulty,
         language: state.language,
       );
-      final questionTexts =
-          state.questions.map((q) => q.question).toList();
+      final questionTexts = state.questions.map((q) => q.question).toList();
       cacheRepo.save(cacheKey, questionTexts);
 
       return null;
@@ -130,13 +149,20 @@ class ResultScreen extends HookConsumerWidget {
     final isWin = playerScore > botScore;
     final isTie = playerScore == botScore;
 
+    // Fire confetti for a win (not a tie).
+    useEffect(() {
+      if (isWin && !isTie) {
+        Future.delayed(kEntryStagger * 3, () {
+          if (context.mounted) confettiCtrl.play();
+        });
+      }
+      return null;
+    }, const []);
+
     Widget staggerWrap(int index, {required Widget child}) {
       return FadeTransition(
         opacity: fadeAnimations[index],
-        child: SlideTransition(
-          position: slideAnimations[index],
-          child: child,
-        ),
+        child: SlideTransition(position: slideAnimations[index], child: child),
       );
     }
 
@@ -147,142 +173,170 @@ class ResultScreen extends HookConsumerWidget {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: kScreenPaddingH,
-              vertical: 32,
-            ),
-            child: CustomScrollView(
-              slivers: [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Spacer(),
-
-                // 0 — Heading
-                staggerWrap(
-                  0,
-                  child: const Text(
-                    'Round Complete',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.foreground,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+        body: Stack(
+          children: [
+            // ── Main content ──────────────────────────────────────────────
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: kScreenPaddingH,
+                  vertical: 32,
                 ),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Spacer(),
 
-                const SizedBox(height: 32),
-
-                // 1 — Score cards
-                staggerWrap(
-                  1,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _ScoreCard(
-                          label: 'You',
-                          score: playerScore,
-                          isWinner: isWin,
-                          isTie: isTie,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _ScoreCard(
-                          label: 'Bot',
-                          score: botScore,
-                          isWinner: !isWin && !isTie,
-                          isTie: isTie,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // 2 — Victory / Defeat / Draw
-                staggerWrap(
-                  2,
-                  child: Text(
-                    isTie
-                        ? 'Draw'
-                        : isWin
-                        ? 'Victory'
-                        : 'Defeat',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isTie
-                          ? AppColors.muted
-                          : isWin
-                          ? AppColors.teal
-                          : AppColors.red,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // 3 — ELO row
-                staggerWrap(
-                  3,
-                  child: _EloRow(
-                    previousElo: previousElo.value,
-                    delta: delta,
-                    newElo: newElo,
-                  ),
-                ),
-
-                const Spacer(),
-
-                // 4 — Action buttons
-                staggerWrap(
-                  4,
-                  child: Column(
-                    children: [
-                      // Play Again
-                      _PrimaryButton(label: 'Play Again', onTap: playAgain),
-                      const SizedBox(height: 12),
-                      // New Topic
-                      _OutlinedButton(label: 'New Topic', onTap: newTopic),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // 5 — Home link
-                staggerWrap(
-                  5,
-                  child: GestureDetector(
-                    onTap: goHome,
-                    child: const SizedBox(
-                      height: 48,
-                      child: Center(
-                        child: Text(
-                          'Home',
-                          style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 16,
+                          // 0 — Heading
+                          staggerWrap(
+                            0,
+                            child: const Text(
+                              'Round Complete',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.foreground,
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
+
+                          const SizedBox(height: 32),
+
+                          // 1 — Score cards
+                          staggerWrap(
+                            1,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _ScoreCard(
+                                    label: 'You',
+                                    score: playerScore,
+                                    animation: scoreCtrl,
+                                    isWinner: isWin,
+                                    isTie: isTie,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _ScoreCard(
+                                    label: 'Bot',
+                                    score: botScore,
+                                    animation: scoreCtrl,
+                                    isWinner: !isWin && !isTie,
+                                    isTie: isTie,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // 2 — Victory / Defeat / Draw
+                          staggerWrap(
+                            2,
+                            child: Text(
+                              isTie
+                                  ? 'Draw'
+                                  : isWin
+                                  ? 'Victory'
+                                  : 'Defeat',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isTie
+                                    ? AppColors.muted
+                                    : isWin
+                                    ? AppColors.teal
+                                    : AppColors.red,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // 3 — ELO row
+                          staggerWrap(
+                            3,
+                            child: _EloRow(
+                              previousElo: previousElo.value,
+                              delta: delta,
+                              newElo: newElo,
+                            ),
+                          ),
+
+                          const Spacer(),
+
+                          // 4 — Action buttons
+                          staggerWrap(
+                            4,
+                            child: Column(
+                              children: [
+                                // Play Again
+                                _PrimaryButton(
+                                  label: 'Play Again',
+                                  onTap: playAgain,
+                                ),
+                                const SizedBox(height: 12),
+                                // New Topic
+                                _OutlinedButton(
+                                  label: 'New Topic',
+                                  onTap: newTopic,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // 5 — Home link
+                          staggerWrap(
+                            5,
+                            child: GestureDetector(
+                              onTap: goHome,
+                              child: const SizedBox(
+                                height: 48,
+                                child: Center(
+                                  child: Text(
+                                    'Home',
+                                    style: TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
+
+            // ── Confetti overlay (top-center) ───────────────────────────
+            if (isWin && !isTie)
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: confettiCtrl,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  numberOfParticles: 20,
+                  maxBlastForce: 30,
+                  minBlastForce: 10,
+                  gravity: 0.2,
+                  colors: const [AppColors.primary, AppColors.teal],
                 ),
-              ],
-            ),
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -299,12 +353,14 @@ class _ScoreCard extends StatelessWidget {
   const _ScoreCard({
     required this.label,
     required this.score,
+    required this.animation,
     required this.isWinner,
     required this.isTie,
   });
 
   final String label;
   final int score;
+  final Animation<double> animation;
   final bool isWinner;
   final bool isTie;
 
@@ -335,13 +391,19 @@ class _ScoreCard extends StatelessWidget {
           const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              '$score',
-              style: const TextStyle(
-                color: AppColors.foreground,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-              ),
+            child: AnimatedBuilder(
+              animation: animation,
+              builder: (_, _) {
+                final displayScore = (score * animation.value).round();
+                return Text(
+                  '$displayScore',
+                  style: const TextStyle(
+                    color: AppColors.foreground,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -394,59 +456,59 @@ class _EloRow extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-          // Previous ELO
-          Text(
-            '$previousElo',
-            style: const TextStyle(
-              color: AppColors.foreground,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            // Previous ELO
+            Text(
+              '$previousElo',
+              style: const TextStyle(
+                color: AppColors.foreground,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          line,
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
+            line,
+            const SizedBox(width: 12),
 
-          // Delta badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: deltaBgColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (deltaIcon != null) ...[
-                  Icon(deltaIcon, color: _deltaColor, size: 18),
-                  const SizedBox(width: 4),
-                ],
-                Text(
-                  deltaText,
-                  style: TextStyle(
-                    color: _deltaColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+            // Delta badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: deltaBgColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (deltaIcon != null) ...[
+                    Icon(deltaIcon, color: _deltaColor, size: 18),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    deltaText,
+                    style: TextStyle(
+                      color: _deltaColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          const SizedBox(width: 12),
-          line,
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
+            line,
+            const SizedBox(width: 12),
 
-          // New ELO
-          Text(
-            '$newElo',
-            style: const TextStyle(
-              color: AppColors.foreground,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            // New ELO
+            Text(
+              '$newElo',
+              style: const TextStyle(
+                color: AppColors.foreground,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );

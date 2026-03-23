@@ -34,3 +34,12 @@ const Curve kSpringCurve = Curves.easeOutBack;
 
 /// Symmetric ease for looping pulse animations.
 const Curve kPulseCurve = Curves.easeInOut;
+
+/// Wrong-answer tile shake duration.
+const Duration kShakeDuration = Duration(milliseconds: 300);
+
+/// Result-screen score counter roll-up duration.
+const Duration kScoreCountDuration = Duration(milliseconds: 800);
+
+/// Confetti burst duration.
+const Duration kConfettiDuration = Duration(seconds: 2);
