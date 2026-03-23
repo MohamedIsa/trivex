@@ -6,11 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 
 import 'package:trivex/models/elo_record.dart';
-import 'package:trivex/models/game_state.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
 import 'package:trivex/repositories/elo_repository.dart';
 import 'package:trivex/screens/game_screen.dart';
+import 'package:trivex/state/game_phase.dart';
 import 'package:trivex/widgets/reveal_bottom_sheet.dart';
 
 // ---------------------------------------------------------------------------
@@ -39,44 +39,26 @@ Question _longOptionQ() => Question(
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
-GameState _initialGameState() => GameState(
-  questions: _tenQuestions(),
-  topic: 'Test',
-  difficulty: 'medium',
-  currentIndex: 0,
-  playerScore: 0,
-  botScore: 0,
-  selectedIndex: null,
-  isRevealing: false,
-  isGameOver: false,
-);
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Pumps [GameScreen] with a pre-seeded notifier — override the StateNotifierProvider with a pre-seeded
-/// notifier.
-Future<ProviderContainer> _pumpWithState(
+Future<ProviderContainer> _pumpWithQuestions(
   WidgetTester tester,
-  GameState state,
-) async {
+  List<Question> questions, {
+  String topic = 'Test',
+  String difficulty = 'medium',
+}) async {
   final container = ProviderContainer(
     overrides: [gameStateNotifierProvider.overrideWith(GameStateNotifier.new)],
   );
 
-  // Seed the notifier's state.
   final notifier = container.read(gameStateNotifierProvider.notifier);
   notifier.initGame(
-    state.questions,
-    topic: state.topic,
-    difficulty: state.difficulty,
+    questions,
+    topic: topic,
+    difficulty: difficulty,
   );
-
-  // If the desired state has non-default fields, apply them by calling
-  // the relevant notifier methods or by overriding the state directly.
-  // For simplicity in tests, we'll just use initGame for the initial state
-  // and let the test manipulate via notifier calls.
 
   final router = GoRouter(
     initialLocation: '/game',
@@ -99,6 +81,10 @@ Future<ProviderContainer> _pumpWithState(
 
   return container;
 }
+
+/// Convenience: pump with the default 10 questions.
+Future<ProviderContainer> _pumpDefault(WidgetTester tester) =>
+    _pumpWithQuestions(tester, _tenQuestions());
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -130,7 +116,7 @@ void main() {
     testWidgets(
       'initial state — question text, 4 answer tiles, score "You 0 · Bot 0"',
       (tester) async {
-        await _pumpWithState(tester, _initialGameState());
+        await _pumpDefault(tester);
         await tester.pump();
 
         // Question text visible.
@@ -153,16 +139,16 @@ void main() {
     testWidgets(
       'tap answer tile A — selectAnswer called, isRevealing becomes true',
       (tester) async {
-        final container = await _pumpWithState(tester, _initialGameState());
+        final container = await _pumpDefault(tester);
         await tester.pump();
 
         // Tap the first answer option text 'Alpha'.
         await tester.tap(find.text('Alpha'));
         await tester.pump();
 
-        final state = container.read(gameStateNotifierProvider);
-        expect(state.selectedIndex, 0);
-        expect(state.isRevealing, isTrue);
+        final phase = container.read(gameStateNotifierProvider);
+        expect(phase, isA<RevealingPhase>());
+        expect((phase as RevealingPhase).selectedIndex, 0);
       },
     );
 
@@ -171,7 +157,7 @@ void main() {
     testWidgets(
       'revealing state — tiles are IgnorePointer, RevealBottomSheet visible',
       (tester) async {
-        final container = await _pumpWithState(tester, _initialGameState());
+        final container = await _pumpDefault(tester);
         await tester.pump();
 
         // Trigger reveal by tapping an answer.
@@ -180,8 +166,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 600));
 
         // Verify the state IS revealing.
-        final state = container.read(gameStateNotifierProvider);
-        expect(state.isRevealing, isTrue);
+        final phase = container.read(gameStateNotifierProvider);
+        expect(phase, isA<RevealingPhase>());
 
         // The IgnorePointer wrapping the ListView should have ignoring=true.
         // Walk the IgnorePointer widgets and find the one with ignoring=true.
@@ -201,7 +187,7 @@ void main() {
     testWidgets('score row updates when state emits new playerScore', (
       tester,
     ) async {
-      final container = await _pumpWithState(tester, _initialGameState());
+      final container = await _pumpDefault(tester);
       await tester.pump();
 
       // Initial score.
@@ -211,11 +197,13 @@ void main() {
       await tester.tap(find.text('Alpha'));
       await tester.pump();
 
-      final state = container.read(gameStateNotifierProvider);
-      expect(state.playerScore, greaterThan(0));
+      final phase = container.read(gameStateNotifierProvider);
+      expect(phase, isA<RevealingPhase>());
+      final score = (phase as RevealingPhase).round.playerScore;
+      expect(score, greaterThan(0));
 
       // The score text should update.
-      expect(find.text('You ${state.playerScore}'), findsOneWidget);
+      expect(find.text('You $score'), findsOneWidget);
     });
 
     // ── Long answer text — no overflow ──────────────────────────────────
@@ -227,19 +215,8 @@ void main() {
           10,
           (i) => i == 0 ? _longOptionQ() : _q(i + 1),
         );
-        final longState = GameState(
-          questions: longQuestions,
-          topic: 'Test',
-          difficulty: 'medium',
-          currentIndex: 0,
-          playerScore: 0,
-          botScore: 0,
-          selectedIndex: null,
-          isRevealing: false,
-          isGameOver: false,
-        );
 
-        await _pumpWithState(tester, longState);
+        await _pumpWithQuestions(tester, longQuestions);
         await tester.pump();
 
         // All 4 badge labels must render (proves all tiles are in the tree).
@@ -274,7 +251,7 @@ void main() {
             .setMockMethodCallHandler(SystemChannels.platform, null);
       });
 
-      await _pumpWithState(tester, _initialGameState());
+      await _pumpDefault(tester);
       await tester.pump();
 
       await tester.tap(find.text('Alpha'));
@@ -289,7 +266,7 @@ void main() {
       'wrong answer — shake Transform.translate present during reveal',
       (tester) async {
         // Use a question where correct = 0, then tap index 1 (wrong).
-        final container = await _pumpWithState(tester, _initialGameState());
+        final container = await _pumpDefault(tester);
         await tester.pump();
 
         // Tap the wrong answer 'Bravo' (index 1, correct is 0).
@@ -298,9 +275,9 @@ void main() {
         // Advance past shake animation start.
         await tester.pump(const Duration(milliseconds: 50));
 
-        final state = container.read(gameStateNotifierProvider);
-        expect(state.isRevealing, isTrue);
-        expect(state.selectedIndex, 1); // wrong
+        final phase = container.read(gameStateNotifierProvider);
+        expect(phase, isA<RevealingPhase>());
+        expect((phase as RevealingPhase).selectedIndex, 1); // wrong
 
         // A Transform widget with a non-zero horizontal offset should exist
         // from the shake animation on the selected-wrong tile.
@@ -321,7 +298,7 @@ void main() {
     testWidgets(
       'answer tile renders with correct Semantics label including option text',
       (tester) async {
-        await _pumpWithState(tester, _initialGameState());
+        await _pumpDefault(tester);
         await tester.pump();
 
         // Each answer tile should have a Semantics node with
@@ -350,7 +327,7 @@ void main() {
     testWidgets(
       'timer bar renders with Semantics label containing seconds value',
       (tester) async {
-        await _pumpWithState(tester, _initialGameState());
+        await _pumpDefault(tester);
         await tester.pump();
 
         // Timer bar should have a semantics label with "Time remaining: N seconds".

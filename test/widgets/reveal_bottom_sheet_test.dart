@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 
 import 'package:trivex/models/elo_record.dart';
-import 'package:trivex/models/game_state.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
+import 'package:trivex/state/game_phase.dart';
 import 'package:trivex/repositories/elo_repository.dart';
 import 'package:trivex/screens/game_screen.dart';
 
@@ -26,55 +26,17 @@ Question _q(int i) => Question(
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
-/// Returns a game state where the player answered correctly (index 0).
-GameState _correctRevealState({int currentIndex = 0}) => GameState(
-      questions: _tenQuestions(),
-      topic: 'Test',
-      difficulty: 'medium',
-      currentIndex: currentIndex,
-      playerScore: 100,
-      botScore: 0,
-      selectedIndex: 0, // correct index
-      isRevealing: true,
-      isGameOver: false,
-    );
-
-/// Returns a game state where the player answered wrong (index 2).
-GameState _wrongRevealState({int currentIndex = 0}) => GameState(
-      questions: _tenQuestions(),
-      topic: 'Test',
-      difficulty: 'medium',
-      currentIndex: currentIndex,
-      playerScore: 0,
-      botScore: 100,
-      selectedIndex: 2, // wrong index
-      isRevealing: true,
-      isGameOver: false,
-    );
-
-/// Returns a timeout state (selectedIndex == null).
-GameState _timeoutState({int currentIndex = 0}) => GameState(
-      questions: _tenQuestions(),
-      topic: 'Test',
-      difficulty: 'medium',
-      currentIndex: currentIndex,
-      playerScore: 0,
-      botScore: 100,
-      selectedIndex: null,
-      isRevealing: true,
-      isGameOver: false,
-    );
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /// Pumps the full [GameScreen] with a pre-seeded game state using
 /// [GameStateNotifier.initGame] + [selectAnswer]/[timeExpired] to reach
-/// the desired state.
+/// the desired revealing state.
 Future<ProviderContainer> _pumpRevealing(
   WidgetTester tester, {
-  required GameState desiredState,
+  int currentIndex = 0,
+  int? selectedIndex,
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -84,20 +46,20 @@ Future<ProviderContainer> _pumpRevealing(
 
   final notifier = container.read(gameStateNotifierProvider.notifier);
   notifier.initGame(
-    desiredState.questions,
-    topic: desiredState.topic,
-    difficulty: desiredState.difficulty,
+    _tenQuestions(),
+    topic: 'Test',
+    difficulty: 'medium',
   );
 
   // Advance to the right question index.
-  for (var i = 0; i < desiredState.currentIndex; i++) {
+  for (var i = 0; i < currentIndex; i++) {
     notifier.selectAnswer(0, timeLeft: 5);
     notifier.nextQuestion();
   }
 
   // Now trigger the reveal for the current question.
-  if (desiredState.selectedIndex != null) {
-    notifier.selectAnswer(desiredState.selectedIndex!, timeLeft: 5);
+  if (selectedIndex != null) {
+    notifier.selectAnswer(selectedIndex, timeLeft: 5);
   } else {
     notifier.timeExpired();
   }
@@ -160,7 +122,7 @@ void main() {
       (tester) async {
         await _pumpRevealing(
           tester,
-          desiredState: _correctRevealState(),
+          selectedIndex: 0,
         );
 
         expect(find.text('Correct!'), findsOneWidget);
@@ -175,7 +137,7 @@ void main() {
       (tester) async {
         await _pumpRevealing(
           tester,
-          desiredState: _wrongRevealState(),
+          selectedIndex: 2,
         );
 
         expect(find.text('Wrong!'), findsOneWidget);
@@ -190,7 +152,6 @@ void main() {
       (tester) async {
         await _pumpRevealing(
           tester,
-          desiredState: _timeoutState(),
         );
 
         expect(find.text("Time's Up!"), findsOneWidget);
@@ -205,7 +166,7 @@ void main() {
       (tester) async {
         final container = await _pumpRevealing(
           tester,
-          desiredState: _correctRevealState(currentIndex: 0),
+          selectedIndex: 0,
         );
 
         // Find and tap "Next →".
@@ -216,10 +177,10 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 600));
 
-        final state = container.read(gameStateNotifierProvider);
+        final phase = container.read(gameStateNotifierProvider);
         // After nextQuestion, currentIndex should advance.
-        expect(state.currentIndex, 1);
-        expect(state.isRevealing, isFalse);
+        expect(phase, isA<PlayingPhase>());
+        expect((phase as PlayingPhase).round.currentIndex, 1);
       },
     );
 
@@ -230,7 +191,8 @@ void main() {
       (tester) async {
         await _pumpRevealing(
           tester,
-          desiredState: _correctRevealState(currentIndex: 9),
+          currentIndex: 9,
+          selectedIndex: 0,
         );
 
         expect(find.text('Results'), findsOneWidget);
@@ -247,7 +209,7 @@ void main() {
         // Start with Q1 wrong reveal already showing.
         await _pumpRevealing(
           tester,
-          desiredState: _wrongRevealState(currentIndex: 0),
+          selectedIndex: 2,
         );
 
         // Confirm "Wrong!" is visible for Q1.
@@ -292,7 +254,7 @@ void main() {
       (tester) async {
         await _pumpRevealing(
           tester,
-          desiredState: _correctRevealState(currentIndex: 0),
+          selectedIndex: 0,
         );
 
         expect(find.text('Correct!'), findsOneWidget);
@@ -310,7 +272,7 @@ void main() {
       (tester) async {
         await _pumpRevealing(
           tester,
-          desiredState: _wrongRevealState(currentIndex: 0),
+          selectedIndex: 2,
         );
 
         expect(find.text('Wrong!'), findsOneWidget);
@@ -328,7 +290,7 @@ void main() {
       (tester) async {
         final container = await _pumpRevealing(
           tester,
-          desiredState: _correctRevealState(currentIndex: 0),
+          selectedIndex: 0,
         );
 
         await tester.tap(find.text('Next →'));
@@ -337,9 +299,9 @@ void main() {
 
         expect(find.text('Correct!'), findsNothing);
 
-        final state = container.read(gameStateNotifierProvider);
-        expect(state.currentIndex, 1);
-        expect(state.isRevealing, isFalse);
+        final phase = container.read(gameStateNotifierProvider);
+        expect(phase, isA<PlayingPhase>());
+        expect((phase as PlayingPhase).round.currentIndex, 1);
       },
     );
 

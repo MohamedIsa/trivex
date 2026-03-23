@@ -7,8 +7,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
-import '../models/game_state.dart';
 import '../providers/game_state_notifier.dart';
+import '../state/game_phase.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 import '../widgets/game_timer.dart';
@@ -39,8 +39,8 @@ class RevealBottomSheet extends HookConsumerWidget {
 
     // Sync sheet on first build if already revealing.
     useEffect(() {
-      final isRevealing = ref.read(gameStateNotifierProvider).isRevealing;
-      if (isRevealing &&
+      final phase = ref.read(gameStateNotifierProvider);
+      if (phase is RevealingPhase &&
           !slideController.isAnimating &&
           slideController.value == 0) {
         slideController.forward();
@@ -55,17 +55,19 @@ class RevealBottomSheet extends HookConsumerWidget {
         if (status != AnimationStatus.dismissed) return;
         if (!context.mounted) return;
 
-        final currentState = ref.read(gameStateNotifierProvider);
-        if (!currentState.isRevealing) return; // already advanced
+        final currentPhase = ref.read(gameStateNotifierProvider);
+        if (currentPhase is! RevealingPhase) return; // already advanced
 
         ref.read(gameStateNotifierProvider.notifier).nextQuestion();
 
-        final newState = ref.read(gameStateNotifierProvider);
-        if (newState.isGameOver) {
+        final newPhase = ref.read(gameStateNotifierProvider);
+        if (newPhase is FinishedPhase) {
           if (context.mounted) context.pushReplacement('/result');
-        } else {
+        } else if (newPhase is PlayingPhase) {
           timerController.restart(
-            duration: Duration(seconds: newState.currentQuestion.timeLimit),
+            duration: Duration(
+              seconds: newPhase.round.currentQuestion.timeLimit,
+            ),
           );
         }
       }
@@ -83,10 +85,13 @@ class RevealBottomSheet extends HookConsumerWidget {
     // Drive slide in/out reactively via ref.listen (not a side effect in build).
     // _SheetPanel watches the provider directly (ConsumerWidget) so
     // state is always fresh — we no longer capture it here.
-    ref.listen<GameState>(gameStateNotifierProvider, (previous, next) {
-      if (next.isRevealing && !(previous?.isRevealing ?? false)) {
+    ref.listen<GamePhase>(gameStateNotifierProvider, (previous, next) {
+      final wasRevealing = previous is RevealingPhase;
+      final isNowRevealing = next is RevealingPhase;
+
+      if (isNowRevealing && !wasRevealing) {
         slideController.forward();
-      } else if (!next.isRevealing &&
+      } else if (!isNowRevealing &&
           slideController.status == AnimationStatus.completed) {
         slideController.reverse();
       }
@@ -160,12 +165,16 @@ class _SheetPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(gameStateNotifierProvider);
+    final phase = ref.watch(gameStateNotifierProvider);
+    if (phase is! RevealingPhase) return const SizedBox.shrink();
+
+    final round = phase.round;
+    final selectedIdx = phase.selectedIndex;
 
     final isCorrect =
-        state.selectedIndex != null &&
-        state.selectedIndex == state.currentQuestion.correctIndex;
-    final isTimeout = state.selectedIndex == null;
+        selectedIdx != null &&
+        selectedIdx == round.currentQuestion.correctIndex;
+    final isTimeout = selectedIdx == null;
     final accentColor = isCorrect ? AppColors.teal : AppColors.red;
     final heading = isTimeout
         ? "Time's Up!"
@@ -173,10 +182,11 @@ class _SheetPanel extends ConsumerWidget {
         ? 'Correct!'
         : 'Wrong!';
 
-    final correctIdx = state.currentQuestion.correctIndex;
+    final correctIdx = round.currentQuestion.correctIndex;
     final correctLetter = String.fromCharCode(65 + correctIdx);
-    final isLastQuestion = state.currentIndex >= state.questions.length - 1;
-    final textDirection = state.language == 'ar'
+    final isLastQuestion =
+        round.currentIndex >= round.questions.length - 1;
+    final textDirection = round.language == 'ar'
         ? TextDirection.rtl
         : TextDirection.ltr;
 
@@ -255,7 +265,7 @@ class _SheetPanel extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    state.currentQuestion.explanation,
+                    round.currentQuestion.explanation,
                     style: const TextStyle(
                       color: AppColors.foreground,
                       fontSize: 14,

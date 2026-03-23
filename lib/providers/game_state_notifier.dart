@@ -1,23 +1,24 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../models/game_state.dart';
 import '../models/question.dart';
 import '../repositories/elo_repository.dart';
 import '../services/bot_engine.dart';
 import '../services/elo_service.dart';
 import '../services/score_service.dart';
+import '../state/game_phase.dart';
 
 part 'game_state_notifier.g.dart';
 
-/// Central game-state manager.
+/// Central game-state manager backed by the [GamePhase] sealed union.
 ///
-/// Consumed by the Game screen and Reveal screen.
-/// The timer drives [timeExpired].
-/// ELO calculation reads [state] after [isGameOver] becomes true.
+/// Consumed by the Game screen, Reveal sheet, Result screen, and Loading
+/// screen.  The timer drives [timeExpired].
+/// ELO calculation runs inside [nextQuestion] when the last question is
+/// revealed.
 @Riverpod(keepAlive: true)
 class GameStateNotifier extends _$GameStateNotifier {
   @override
-  GameState build() => GameState.empty;
+  GamePhase build() => const GamePhase.idle();
 
   /// Access the ELO repository via the provider graph.
   EloRepository get _eloRepository => ref.read(eloRepositoryProvider);
@@ -34,45 +35,48 @@ class GameStateNotifier extends _$GameStateNotifier {
     String language = 'en',
   }) {
     assert(questions.isNotEmpty, 'questions must not be empty');
-    state = GameState(
-      questions: questions,
-      topic: topic,
-      difficulty: difficulty,
-      language: language,
-      currentIndex: 0,
-      playerScore: 0,
-      botScore: 0,
-      selectedIndex: null,
-      isRevealing: false,
-      isGameOver: false,
+    state = GamePhase.playing(
+      round: GameRound(
+        questions: questions,
+        topic: topic,
+        difficulty: difficulty,
+        language: language,
+        currentIndex: 0,
+        playerScore: 0,
+        botScore: 0,
+      ),
     );
   }
 
-  /// Records the player's answer, runs the bot, and transitions to revealing.
+  /// Records the player's answer, runs the bot, and transitions to
+  /// [RevealingPhase].
   ///
   /// [index] is the option the player tapped (0–3).
   /// [timeLeft] is the remaining seconds used for the speed bonus.
   void selectAnswer(int index, {required int timeLeft}) {
-    // Guard: ignore taps after the answer is already locked in.
-    if (state.isRevealing || state.isGameOver) return;
+    // Guard: only valid during PlayingPhase.
+    final current = state;
+    if (current is! PlayingPhase) return;
 
-    final correct = state.currentQuestion.correctIndex;
+    final round = current.round;
+    final correct = round.currentQuestion.correctIndex;
     final playerCorrect = index == correct;
 
     final playerPoints = ScoreService.calculatePoints(
       playerCorrect,
       timeLeft.toDouble(),
-      timeLimitSeconds: state.currentQuestion.timeLimit.toDouble(),
+      timeLimitSeconds: round.currentQuestion.timeLimit.toDouble(),
     );
 
-    final botCorrect = BotEngine.didBotAnswer(state.difficulty);
+    final botCorrect = BotEngine.didBotAnswer(round.difficulty);
     final botPoints = botCorrect ? 100 : 0;
 
-    state = state.copyWith(
+    state = GamePhase.revealing(
+      round: round.copyWith(
+        playerScore: round.playerScore + playerPoints,
+        botScore: round.botScore + botPoints,
+      ),
       selectedIndex: index,
-      playerScore: state.playerScore + playerPoints,
-      botScore: state.botScore + botPoints,
-      isRevealing: true,
     );
   }
 
@@ -81,18 +85,22 @@ class GameStateNotifier extends _$GameStateNotifier {
   /// When the game ends, the player's current persisted ELO is read from
   /// [EloRepository] and the delta is computed via [EloService].
   void nextQuestion() {
-    if (state.currentIndex >= state.questions.length - 1) {
+    final current = state;
+    if (current is! RevealingPhase) return;
+
+    final round = current.round;
+
+    if (round.currentIndex >= round.questions.length - 1) {
       // Last question was just revealed — game over.
       final playerRating = _eloRepository.getCurrentRating();
-      final playerWon = state.playerScore > state.botScore;
+      final playerWon = round.playerScore > round.botScore;
       final elo = EloService.calculate(playerRating, playerWon);
-      state = state.copyWith(isGameOver: true, eloResult: elo);
+      state = GamePhase.finished(round: round, eloResult: elo);
       return;
     }
-    state = state.copyWith(
-      currentIndex: state.currentIndex + 1,
-      selectedIndex: null,
-      isRevealing: false,
+
+    state = GamePhase.playing(
+      round: round.copyWith(currentIndex: round.currentIndex + 1),
     );
   }
 
@@ -100,15 +108,17 @@ class GameStateNotifier extends _$GameStateNotifier {
   ///
   /// No player points are awarded; the bot still gets a chance to answer.
   void timeExpired() {
-    if (state.isRevealing || state.isGameOver) return;
+    // Guard: only valid during PlayingPhase.
+    final current = state;
+    if (current is! PlayingPhase) return;
 
-    final botCorrect = BotEngine.didBotAnswer(state.difficulty);
+    final round = current.round;
+    final botCorrect = BotEngine.didBotAnswer(round.difficulty);
     final botPoints = botCorrect ? 100 : 0;
 
-    state = state.copyWith(
-      // selectedIndex stays null — no player selection
-      botScore: state.botScore + botPoints,
-      isRevealing: true,
+    state = GamePhase.revealing(
+      round: round.copyWith(botScore: round.botScore + botPoints),
+      // selectedIndex stays null — no player selection.
     );
   }
 }

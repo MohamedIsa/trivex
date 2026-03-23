@@ -11,6 +11,7 @@ import '../providers/elo_history_provider.dart';
 import '../providers/game_state_notifier.dart';
 import '../repositories/elo_repository.dart';
 import '../repositories/question_cache_repository.dart';
+import '../state/game_phase.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
@@ -85,23 +86,24 @@ class ResultScreen extends HookConsumerWidget {
       final eloRepo = ref.read(eloRepositoryProvider);
       previousElo.value = eloRepo.getCurrentRating();
 
-      final state = ref.read(gameStateNotifierProvider);
-      final eloResult = state.eloResult;
-      if (eloResult != null) {
-        eloRepo.saveResult(eloResult).then((_) {
+      final phase = ref.read(gameStateNotifierProvider);
+      if (phase is FinishedPhase) {
+        eloRepo.saveResult(phase.eloResult).then((_) {
           ref.invalidate(eloHistoryProvider);
         });
-      }
 
-      // Save seen question texts to the deduplication cache.
-      final cacheRepo = ref.read(questionCacheRepositoryProvider);
-      final cacheKey = QuestionCacheRepository.cacheKey(
-        topic: state.topic,
-        difficulty: state.difficulty,
-        language: state.language,
-      );
-      final questionTexts = state.questions.map((q) => q.question).toList();
-      cacheRepo.save(cacheKey, questionTexts);
+        // Save seen question texts to the deduplication cache.
+        final cacheRepo = ref.read(questionCacheRepositoryProvider);
+        final round = phase.round;
+        final cacheKey = QuestionCacheRepository.cacheKey(
+          topic: round.topic,
+          difficulty: round.difficulty,
+          language: round.language,
+        );
+        final questionTexts =
+            round.questions.map((q) => q.question).toList();
+        cacheRepo.save(cacheKey, questionTexts);
+      }
 
       return null;
     }, const []);
@@ -113,13 +115,15 @@ class ResultScreen extends HookConsumerWidget {
     void playAgain() {
       if (navigating.value) return;
       navigating.value = true;
-      final state = ref.read(gameStateNotifierProvider);
+      final phase = ref.read(gameStateNotifierProvider);
+      if (phase is! FinishedPhase) return;
+      final round = phase.round;
       context.go(
         '/loading',
         extra: GameConfig(
-          topic: state.topic,
-          difficulty: state.difficulty,
-          count: state.questions.length,
+          topic: round.topic,
+          difficulty: round.difficulty,
+          count: round.questions.length,
         ),
       );
     }
@@ -140,11 +144,17 @@ class ResultScreen extends HookConsumerWidget {
 
     final state = ref.watch(gameStateNotifierProvider);
 
-    final playerScore = state.playerScore;
-    final botScore = state.botScore;
+    // Guard: only render when the game is finished.
+    if (state is! FinishedPhase) {
+      return const Scaffold(backgroundColor: AppColors.background);
+    }
+
+    final round = state.round;
+    final playerScore = round.playerScore;
+    final botScore = round.botScore;
     final eloResult = state.eloResult;
-    final delta = eloResult?.delta ?? 0;
-    final newElo = eloResult?.newRating ?? previousElo.value;
+    final delta = eloResult.delta;
+    final newElo = eloResult.newRating;
 
     final isWin = playerScore > botScore;
     final isTie = playerScore == botScore;

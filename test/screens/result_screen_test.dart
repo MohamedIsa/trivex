@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/models/game_config.dart';
-import 'package:trivex/models/game_state.dart';
 import 'package:trivex/models/question.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
 import 'package:trivex/providers/game_state_notifier.dart';
@@ -14,6 +13,7 @@ import 'package:trivex/repositories/elo_repository.dart';
 import 'package:trivex/repositories/question_cache_repository.dart';
 import 'package:trivex/screens/result_screen.dart';
 import 'package:trivex/services/elo_service.dart';
+import 'package:trivex/state/game_phase.dart';
 
 // ---------------------------------------------------------------------------
 // Fakes — no Hive I/O
@@ -39,14 +39,14 @@ class _FakeEloRepository extends EloRepository {
   List<EloRecord> getHistory() => List.unmodifiable(_records);
 }
 
-/// Exposes the protected `state` setter so we can seed an exact [GameState]
+/// Exposes the protected `state` setter so we can seed an exact [GamePhase]
 /// without playing through 10 questions.
 class _SeedableNotifier extends GameStateNotifier {
-  _SeedableNotifier(this._seedState);
-  final GameState _seedState;
+  _SeedableNotifier(this._seedPhase);
+  final GamePhase _seedPhase;
 
   @override
-  GameState build() => _seedState;
+  GamePhase build() => _seedPhase;
 }
 
 /// In-memory [QuestionCacheRepository] — stores nothing, avoids Hive.
@@ -78,66 +78,62 @@ Question _q(int i) => Question(
 
 List<Question> _tenQuestions() => List.generate(10, (i) => _q(i + 1));
 
-GameState _winState() {
+GamePhase _winState() {
   final elo = EloService.calculate(1000, true);
-  return GameState(
-    questions: _tenQuestions(),
-    topic: 'Test',
-    difficulty: 'medium',
-    currentIndex: 9,
-    playerScore: 500,
-    botScore: 200,
-    selectedIndex: 0,
-    isRevealing: false,
-    isGameOver: true,
+  return GamePhase.finished(
+    round: GameRound(
+      questions: _tenQuestions(),
+      topic: 'Test',
+      difficulty: 'medium',
+      currentIndex: 9,
+      playerScore: 500,
+      botScore: 200,
+    ),
     eloResult: elo,
   );
 }
 
-GameState _loseState() {
+GamePhase _loseState() {
   final elo = EloService.calculate(1000, false);
-  return GameState(
-    questions: _tenQuestions(),
-    topic: 'Test',
-    difficulty: 'medium',
-    currentIndex: 9,
-    playerScore: 100,
-    botScore: 400,
-    selectedIndex: 0,
-    isRevealing: false,
-    isGameOver: true,
+  return GamePhase.finished(
+    round: GameRound(
+      questions: _tenQuestions(),
+      topic: 'Test',
+      difficulty: 'medium',
+      currentIndex: 9,
+      playerScore: 100,
+      botScore: 400,
+    ),
     eloResult: elo,
   );
 }
 
-GameState _highScoreState() {
+GamePhase _highScoreState() {
   final elo = EloService.calculate(1000, true);
-  return GameState(
-    questions: _tenQuestions(),
-    topic: 'Test',
-    difficulty: 'medium',
-    currentIndex: 9,
-    playerScore: 1450,
-    botScore: 0,
-    selectedIndex: 0,
-    isRevealing: false,
-    isGameOver: true,
+  return GamePhase.finished(
+    round: GameRound(
+      questions: _tenQuestions(),
+      topic: 'Test',
+      difficulty: 'medium',
+      currentIndex: 9,
+      playerScore: 1450,
+      botScore: 0,
+    ),
     eloResult: elo,
   );
 }
 
-GameState _drawState() {
+GamePhase _drawState() {
   final elo = EloService.calculate(1000, true);
-  return GameState(
-    questions: _tenQuestions(),
-    topic: 'Test',
-    difficulty: 'medium',
-    currentIndex: 9,
-    playerScore: 300,
-    botScore: 300,
-    selectedIndex: 0,
-    isRevealing: false,
-    isGameOver: true,
+  return GamePhase.finished(
+    round: GameRound(
+      questions: _tenQuestions(),
+      topic: 'Test',
+      difficulty: 'medium',
+      currentIndex: 9,
+      playerScore: 300,
+      botScore: 300,
+    ),
     eloResult: elo,
   );
 }
@@ -150,7 +146,7 @@ GameState _drawState() {
 /// Uses a phone-sized surface and fully-faked providers (no Hive).
 Future<ProviderContainer> _pumpResultScreen(
   WidgetTester tester, {
-  required GameState state,
+  required GamePhase state,
   void Function(String routeName)? onRoute,
 }) async {
   tester.view.physicalSize = const Size(1080, 1920);
@@ -484,7 +480,7 @@ void main() {
 
 Future<GoRouter> _pumpWithRouter(
   WidgetTester tester, {
-  required GameState state,
+  required GamePhase state,
   void Function(Object? extra)? onLoadingExtra,
 }) async {
   tester.view.physicalSize = const Size(1080, 1920);

@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/game_state.dart';
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../providers/game_state_notifier.dart';
+import '../state/game_phase.dart';
 import '../theme/app_colors.dart';
 import '../widgets/game_timer.dart';
 import '../widgets/reveal_bottom_sheet.dart';
@@ -31,15 +31,18 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  void _onTileTap(int index, GameState state) {
-    if (state.isRevealing || state.isGameOver) return;
+  void _onTileTap(int index) {
+    final phase = ref.read(gameStateNotifierProvider);
+    if (phase is! PlayingPhase) return;
 
     // Haptic on answer selection.
     HapticFeedback.mediumImpact();
 
     final controller = _timerController.controller;
     final remaining = controller != null
-        ? ((1.0 - controller.value) * state.currentQuestion.timeLimit).round()
+        ? ((1.0 - controller.value) *
+                phase.round.currentQuestion.timeLimit)
+            .round()
         : 0;
 
     _timerController.cancel();
@@ -52,19 +55,32 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(gameStateNotifierProvider);
+    final phase = ref.watch(gameStateNotifierProvider);
 
-    // Guard: if questions haven't been loaded yet, show nothing.
-    if (state.questions.isEmpty) {
-      return const Scaffold(backgroundColor: AppColors.background);
+    // Extract the active round from Playing or Revealing phases.
+    final GameRound round;
+    final bool isRevealing;
+    final int? selectedIndex;
+
+    switch (phase) {
+      case PlayingPhase(round: final r):
+        round = r;
+        isRevealing = false;
+        selectedIndex = null;
+      case RevealingPhase(round: final r, selectedIndex: final si):
+        round = r;
+        isRevealing = true;
+        selectedIndex = si;
+      default:
+        // Guard: idle / loading / finished — show nothing.
+        return const Scaffold(backgroundColor: AppColors.background);
     }
 
-    final textDirection = state.language == 'ar'
-        ? TextDirection.rtl
-        : TextDirection.ltr;
+    final textDirection =
+        round.language == 'ar' ? TextDirection.rtl : TextDirection.ltr;
 
     return PopScope(
-      canPop: state.questions.isEmpty || state.isGameOver,
+      canPop: phase is IdlePhase || phase is FinishedPhase,
       child: Directionality(
         textDirection: textDirection,
         child: Scaffold(
@@ -76,13 +92,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 Column(
                   children: [
                     // ── Top bar ──────────────────────────────────────────────
-                    _TopBar(state: state),
+                    _TopBar(round: round),
 
                     // ── Timer bar ────────────────────────────────────────────
                     GameTimer(
                       timerController: _timerController,
                       duration: Duration(
-                        seconds: state.currentQuestion.timeLimit,
+                        seconds: round.currentQuestion.timeLimit,
                       ),
                     ),
                     _TimerBar(timerController: _timerController),
@@ -98,19 +114,24 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Question text — slides in on each new question.
-                            _QuestionText(state: state),
+                            _QuestionText(
+                              round: round,
+                              isRevealing: isRevealing,
+                            ),
 
                             const SizedBox(height: 32),
 
                             // Answer tiles
                             _AnswerTileList(
-                              state: state,
+                              round: round,
+                              isRevealing: isRevealing,
+                              selectedIndex: selectedIndex,
                               pressedIndex: _pressedIndex,
                               onTapDown: (i) =>
                                   setState(() => _pressedIndex = i),
                               onTapUp: (i) {
                                 setState(() => _pressedIndex = null);
-                                _onTileTap(i, state);
+                                _onTileTap(i);
                               },
                               onTapCancel: () =>
                                   setState(() => _pressedIndex = null),
@@ -140,9 +161,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 // ── Top bar ─────────────────────────────────────────────────────────────────
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.state});
+  const _TopBar({required this.round});
 
-  final GameState state;
+  final GameRound round;
 
   @override
   Widget build(BuildContext context) {
@@ -160,9 +181,9 @@ class _TopBar extends StatelessWidget {
         children: [
           Semantics(
             label:
-                'Question ${state.currentIndex + 1} of ${state.questions.length}',
+                'Question ${round.currentIndex + 1} of ${round.questions.length}',
             child: Text(
-              'Q ${state.currentIndex + 1} / ${state.questions.length}',
+              'Q ${round.currentIndex + 1} / ${round.questions.length}',
               style: const TextStyle(
                 color: AppColors.foreground,
                 fontSize: 14,
@@ -172,11 +193,11 @@ class _TopBar extends StatelessWidget {
           ),
           Semantics(
             label:
-                'Your score: ${state.playerScore}, Bot score: ${state.botScore}',
+                'Your score: ${round.playerScore}, Bot score: ${round.botScore}',
             child: Row(
               children: [
                 Text(
-                  'You ${state.playerScore}',
+                  'You ${round.playerScore}',
                   style: const TextStyle(
                     color: AppColors.foreground,
                     fontSize: 14,
@@ -188,7 +209,7 @@ class _TopBar extends StatelessWidget {
                   style: TextStyle(color: AppColors.muted, fontSize: 14),
                 ),
                 Text(
-                  'Bot ${state.botScore}',
+                  'Bot ${round.botScore}',
                   style: const TextStyle(
                     color: AppColors.foreground,
                     fontSize: 14,
@@ -260,9 +281,10 @@ class _TimerBar extends StatelessWidget {
 // ── Question text ───────────────────────────────────────────────────────────
 
 class _QuestionText extends StatelessWidget {
-  const _QuestionText({required this.state});
+  const _QuestionText({required this.round, required this.isRevealing});
 
-  final GameState state;
+  final GameRound round;
+  final bool isRevealing;
 
   @override
   Widget build(BuildContext context) {
@@ -279,11 +301,11 @@ class _QuestionText extends StatelessWidget {
         );
       },
       child: AnimatedOpacity(
-        key: ValueKey(state.currentIndex),
-        opacity: state.isRevealing ? 0.5 : 1.0,
+        key: ValueKey(round.currentIndex),
+        opacity: isRevealing ? 0.5 : 1.0,
         duration: kButtonTransition,
         child: Text(
-          state.currentQuestion.question,
+          round.currentQuestion.question,
           softWrap: true,
           style: const TextStyle(
             color: AppColors.foreground,
@@ -301,14 +323,18 @@ class _QuestionText extends StatelessWidget {
 
 class _AnswerTileList extends StatelessWidget {
   const _AnswerTileList({
-    required this.state,
+    required this.round,
+    required this.isRevealing,
+    required this.selectedIndex,
     required this.pressedIndex,
     required this.onTapDown,
     required this.onTapUp,
     required this.onTapCancel,
   });
 
-  final GameState state;
+  final GameRound round;
+  final bool isRevealing;
+  final int? selectedIndex;
   final int? pressedIndex;
   final ValueChanged<int> onTapDown;
   final ValueChanged<int> onTapUp;
@@ -317,14 +343,16 @@ class _AnswerTileList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      ignoring: state.isRevealing,
+      ignoring: isRevealing,
       child: Column(
         children: [
-          for (int i = 0; i < state.currentQuestion.options.length; i++) ...[
+          for (int i = 0; i < round.currentQuestion.options.length; i++) ...[
             if (i > 0) const SizedBox(height: 12),
             _AnswerTile(
               index: i,
-              state: state,
+              round: round,
+              isRevealing: isRevealing,
+              selectedIndex: selectedIndex,
               isPressed: pressedIndex == i,
               onTapDown: () => onTapDown(i),
               onTapUp: () => onTapUp(i),
@@ -342,7 +370,9 @@ class _AnswerTileList extends StatelessWidget {
 class _AnswerTile extends HookWidget {
   const _AnswerTile({
     required this.index,
-    required this.state,
+    required this.round,
+    required this.isRevealing,
+    required this.selectedIndex,
     required this.isPressed,
     required this.onTapDown,
     required this.onTapUp,
@@ -352,7 +382,9 @@ class _AnswerTile extends HookWidget {
   static const _labels = ['A', 'B', 'C', 'D'];
 
   final int index;
-  final GameState state;
+  final GameRound round;
+  final bool isRevealing;
+  final int? selectedIndex;
   final bool isPressed;
   final VoidCallback onTapDown;
   final VoidCallback onTapUp;
@@ -360,8 +392,8 @@ class _AnswerTile extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCorrectTile = index == state.currentQuestion.correctIndex;
-    final isSelectedWrong = state.selectedIndex == index && !isCorrectTile;
+    final isCorrectTile = index == round.currentQuestion.correctIndex;
+    final isSelectedWrong = selectedIndex == index && !isCorrectTile;
 
     // ── Shake animation for wrong answer ────────────────────────────────
     final shakeCtrl = useAnimationController(duration: kShakeDuration);
@@ -379,18 +411,18 @@ class _AnswerTile extends HookWidget {
     // Trigger shake + haptic when this tile is the selected-wrong tile on
     // reveal. Only fire once per reveal (check controller is dismissed).
     useEffect(() {
-      if (state.isRevealing && isSelectedWrong && shakeCtrl.isDismissed) {
+      if (isRevealing && isSelectedWrong && shakeCtrl.isDismissed) {
         HapticFeedback.lightImpact();
         shakeCtrl.forward(from: 0);
       }
-      if (state.isRevealing &&
+      if (isRevealing &&
           isCorrectTile &&
-          state.selectedIndex != null &&
-          state.selectedIndex == state.currentQuestion.correctIndex) {
+          selectedIndex != null &&
+          selectedIndex == round.currentQuestion.correctIndex) {
         HapticFeedback.heavyImpact();
       }
       return null;
-    }, [state.isRevealing, state.currentIndex]);
+    }, [isRevealing, round.currentIndex]);
 
     // ── Resolve reveal colours ──────────────────────────────────────────
     Color bg;
@@ -399,7 +431,7 @@ class _AnswerTile extends HookWidget {
     Color badgeColor;
     Color badgeTextColor;
 
-    if (!state.isRevealing) {
+    if (!isRevealing) {
       bg = AppColors.card;
       borderColor = AppColors.border;
       textColor = AppColors.foreground;
@@ -426,11 +458,11 @@ class _AnswerTile extends HookWidget {
     }
 
     // ── Scale on tap ────────────────────────────────────────────────────
-    final scale = (!state.isRevealing && isPressed) ? 0.98 : 1.0;
+    final scale = (!isRevealing && isPressed) ? 0.98 : 1.0;
 
     return Semantics(
       label:
-          'Option ${_labels[index]}: ${state.currentQuestion.options[index]}',
+          'Option ${_labels[index]}: ${round.currentQuestion.options[index]}',
       button: true,
       child: GestureDetector(
         onTapDown: (_) => onTapDown(),
@@ -477,7 +509,7 @@ class _AnswerTile extends HookWidget {
                   // Option text
                   Expanded(
                     child: Text(
-                      state.currentQuestion.options[index],
+                      round.currentQuestion.options[index],
                       softWrap: true,
                       style: TextStyle(color: textColor, fontSize: 16),
                     ),

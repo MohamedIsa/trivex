@@ -12,6 +12,7 @@ import '../models/game_config.dart';
 import '../providers/game_state_notifier.dart';
 import '../repositories/question_cache_repository.dart';
 import '../services/question_service.dart';
+import '../state/game_phase.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 
@@ -151,9 +152,9 @@ class LoadingScreen extends HookConsumerWidget {
 
     // ── Build ───────────────────────────────────────────────────────────────
 
-    final gameState = ref.watch(gameStateNotifierProvider);
+    final gamePhase = ref.watch(gameStateNotifierProvider);
     final isGameActive =
-        gameState.questions.isNotEmpty && !gameState.isGameOver;
+        gamePhase is PlayingPhase || gamePhase is RevealingPhase;
 
     return PopScope(
       canPop: !isGameActive,
