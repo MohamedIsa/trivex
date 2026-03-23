@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'app/router.dart';
 import 'models/elo_record.dart';
+import 'models/question.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(EloRecordAdapter());
+  Hive.registerAdapter(QuestionAdapter());
   await Hive.openBox<EloRecord>('elo_history');
   await Hive.openBox('question_cache');
+  await Hive.openBox('offline_questions');
   runApp(const ProviderScope(child: MainApp()));
 }
 

@@ -10,6 +10,7 @@ import '../core/app_error.dart';
 import '../core/result.dart';
 import '../models/game_config.dart';
 import '../providers/game_state_notifier.dart';
+import '../repositories/offline_question_cache.dart';
 import '../repositories/question_cache_repository.dart';
 import '../services/question_service.dart';
 import '../state/game_phase.dart';
@@ -59,6 +60,7 @@ class LoadingScreen extends HookConsumerWidget {
     final fetching = useState(false);
     final cancelled = useRef(false);
     final error = useState<String?>(null);
+    final isOffline = useState(false);
     final entryOpacity = useState(0.0);
 
     // ── Fetch logic ─────────────────────────────────────────────────────────
@@ -90,8 +92,10 @@ class LoadingScreen extends HookConsumerWidget {
         );
         final seenQuestions = cacheRepo.getSeenQuestions(cacheKey);
 
+        final offlineCache = ref.read(offlineQuestionCacheProvider);
         final result = await QuestionService(
           client: client,
+          offlineCache: offlineCache,
         ).fetchQuestions(config, excludeQuestions: seenQuestions);
 
         if (cancelled.value || !context.mounted) return;
@@ -109,6 +113,15 @@ class LoadingScreen extends HookConsumerWidget {
                 );
 
             if (!context.mounted) return;
+
+            // Show brief offline banner before navigating to the game.
+            if (fetchResult.isOffline) {
+              pulseCtrl.stop();
+              isOffline.value = true;
+              await Future.delayed(const Duration(milliseconds: 1500));
+              if (cancelled.value || !context.mounted) return;
+            }
+
             context.pushReplacement('/game');
           case Err(error: final appError):
             if (cancelled.value || !context.mounted) return;
@@ -178,11 +191,14 @@ class LoadingScreen extends HookConsumerWidget {
                       error: error.value!,
                       onRetry: () {
                         cancelled.value = false;
+                        isOffline.value = false;
                         pulseCtrl.repeat(reverse: true);
                         fetchQuestions();
                       },
                       onCancel: cancel,
                     )
+                  : isOffline.value
+                  ? _buildOfflineBanner()
                   : _buildLoading(
                       pulseCtrl: pulseCtrl,
                       pulseOpacity: pulseOpacity,
@@ -198,6 +214,60 @@ class LoadingScreen extends HookConsumerWidget {
 }
 
 // ── Build helpers (top-level, stateless) ────────────────────────────────────
+
+Widget _buildOfflineBanner() {
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      // Wordmark (static).
+      RichText(
+        text: const TextSpan(
+          children: [
+            TextSpan(
+              text: 'Triv',
+              style: TextStyle(
+                color: AppColors.foreground,
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text: 'ex',
+              style: TextStyle(
+                color: AppColors.teal,
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+
+      // Offline banner — muted colour, not error red.
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.mutedFaint,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off, color: AppColors.muted, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                'No connection — playing with cached questions',
+                style: TextStyle(color: AppColors.muted, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
 
 Widget _buildLoading({
   required AnimationController pulseCtrl,

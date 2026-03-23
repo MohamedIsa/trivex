@@ -10,6 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:trivex/models/game_config.dart';
+import 'package:trivex/models/question.dart';
+import 'package:trivex/repositories/offline_question_cache.dart';
 import 'package:trivex/repositories/question_cache_repository.dart';
 import 'package:trivex/screens/loading_screen.dart';
 
@@ -18,6 +20,15 @@ import 'package:trivex/screens/loading_screen.dart';
 // ---------------------------------------------------------------------------
 
 const _config = GameConfig(topic: 'History', difficulty: 'medium', count: 10);
+
+/// Stub that avoids real Hive I/O in widget tests.
+class _NoOpOfflineCache extends OfflineQuestionCache {
+  @override
+  Future<void> save(String key, List<Question> questions) async {}
+
+  @override
+  List<Question>? get(String key) => null;
+}
 
 /// Pumps [LoadingScreen] inside a [MaterialApp.router] with [GoRouter].
 ///
@@ -31,6 +42,7 @@ Future<GoRouter> _pumpLoadingScreen(
   WidgetTester tester, {
   GameConfig? config = _config,
   void Function(String)? onRoute,
+  List<Override> overrides = const [],
 }) async {
   final router = GoRouter(
     initialLocation: '/loading',
@@ -50,6 +62,7 @@ Future<GoRouter> _pumpLoadingScreen(
   );
   await tester.pumpWidget(
     ProviderScope(
+      overrides: overrides,
       child: MaterialApp.router(routerConfig: router),
     ),
   );
@@ -66,7 +79,11 @@ void main() {
   setUp(() async {
     hiveDir = Directory.systemTemp.createTempSync('hive_loading_test_');
     Hive.init(hiveDir.path);
+    if (!Hive.isAdapterRegistered(QuestionAdapter().typeId)) {
+      Hive.registerAdapter(QuestionAdapter());
+    }
     await Hive.openBox(QuestionCacheRepository.boxName);
+    await Hive.openBox(OfflineQuestionCache.boxName);
   });
 
   tearDown(() async {
@@ -95,68 +112,59 @@ void main() {
 
     // ── Tap Cancel → pops to previous route ───────────────────────────────
 
-    testWidgets(
-      'tap Cancel — pops to previous route',
-      (tester) async {
-        // Build a two-page stack so there's something to pop to.
-        final router = GoRouter(
-          initialLocation: '/topic',
-          routes: [
-            GoRoute(
-              path: '/topic',
-              builder: (_, _) => const Scaffold(body: Text('Topic')),
-            ),
-            GoRoute(
-              path: '/loading',
-              builder: (_, _) => const LoadingScreen(gameConfig: _config),
-            ),
-            GoRoute(
-              path: '/game',
-              builder: (_, _) => const Scaffold(),
-            ),
-          ],
-        );
-        await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp.router(routerConfig: router),
+    testWidgets('tap Cancel — pops to previous route', (tester) async {
+      // Build a two-page stack so there's something to pop to.
+      final router = GoRouter(
+        initialLocation: '/topic',
+        routes: [
+          GoRoute(
+            path: '/topic',
+            builder: (_, _) => const Scaffold(body: Text('Topic')),
           ),
-        );
-        await tester.pumpAndSettle();
+          GoRoute(
+            path: '/loading',
+            builder: (_, _) => const LoadingScreen(gameConfig: _config),
+          ),
+          GoRoute(path: '/game', builder: (_, _) => const Scaffold()),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      );
+      await tester.pumpAndSettle();
 
-        // Push /loading on top.
-        router.push('/loading');
-        // Let the push animation + post-frame callback fire.
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
+      // Push /loading on top.
+      router.push('/loading');
+      // Let the push animation + post-frame callback fire.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-        // Let the HTTP call fail so the pulse animation stops and we
-        // can settle.
-        await tester.pumpAndSettle(const Duration(seconds: 6));
+      // Let the HTTP call fail so the pulse animation stops and we
+      // can settle.
+      await tester.pumpAndSettle(const Duration(seconds: 6));
 
-        // Error state shows Cancel button.
-        final cancelFinder = find.text('Cancel');
-        expect(cancelFinder, findsWidgets);
-        await tester.tap(cancelFinder.last);
-        await tester.pumpAndSettle();
+      // Error state shows Cancel button.
+      final cancelFinder = find.text('Cancel');
+      expect(cancelFinder, findsWidgets);
+      await tester.tap(cancelFinder.last);
+      await tester.pumpAndSettle();
 
-        expect(find.text('Topic'), findsOneWidget);
-      },
-    );
+      expect(find.text('Topic'), findsOneWidget);
+    });
 
     // ── Shows generating text while loading ───────────────────────────────
 
-    testWidgets(
-      'loading state — "Generating questions…" text visible',
-      (tester) async {
-        await _pumpLoadingScreen(tester);
+    testWidgets('loading state — "Generating questions…" text visible', (
+      tester,
+    ) async {
+      await _pumpLoadingScreen(tester);
 
-        // Before the post-frame callback fires, the screen is in its
-        // initial state: _error is null, _fetching is false. The build
-        // method shows _buildLoading() because _error == null.
-        // The "Generating questions…" subtitle is part of _buildLoading.
-        expect(find.text('Generating questions…'), findsOneWidget);
-      },
-    );
+      // Before the post-frame callback fires, the screen is in its
+      // initial state: _error is null, _fetching is false. The build
+      // method shows _buildLoading() because _error == null.
+      // The "Generating questions…" subtitle is part of _buildLoading.
+      expect(find.text('Generating questions…'), findsOneWidget);
+    });
 
     // ── Missing config shows error ────────────────────────────────────────
 
@@ -167,16 +175,11 @@ void main() {
         final router = GoRouter(
           initialLocation: '/loading',
           routes: [
-            GoRoute(
-              path: '/loading',
-              builder: (_, _) => const LoadingScreen(),
-            ),
+            GoRoute(path: '/loading', builder: (_, _) => const LoadingScreen()),
           ],
         );
         await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp.router(routerConfig: router),
-          ),
+          ProviderScope(child: MaterialApp.router(routerConfig: router)),
         );
 
         // Trigger the post-frame callback. _fetchQuestions sees null config
@@ -201,6 +204,11 @@ void main() {
             await _pumpLoadingScreen(
               tester,
               onRoute: (route) => navigatedTo = route,
+              overrides: [
+                offlineQuestionCacheProvider.overrideWithValue(
+                  _NoOpOfflineCache(),
+                ),
+              ],
             );
 
             // Trigger the post-frame callback → _fetchQuestions starts.
@@ -225,9 +233,7 @@ void main() {
                 'language': 'en',
               }),
               200,
-              headers: {
-                'content-type': 'application/json; charset=utf-8',
-              },
+              headers: {'content-type': 'application/json; charset=utf-8'},
             ),
           ),
         );
