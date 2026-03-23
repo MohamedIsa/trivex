@@ -7,6 +7,7 @@ import '../screens/home_screen.dart';
 import '../screens/loading_screen.dart';
 import '../screens/result_screen.dart';
 import '../screens/topic_screen.dart';
+import '../theme/app_colors.dart';
 
 // ---------------------------------------------------------------------------
 // Application router — declarative, type-safe with GoRouter.
@@ -40,11 +41,11 @@ final goRouter = GoRouter(
     ),
   ],
   errorBuilder: (_, state) => Scaffold(
-    backgroundColor: const Color(0xFF1A0A2E),
+    backgroundColor: AppColors.background,
     body: Center(
       child: Text(
         '404 — ${state.uri} not found',
-        style: const TextStyle(color: Color(0xFFE84747)),
+        style: TextStyle(color: AppColors.red),
       ),
     ),
   ),

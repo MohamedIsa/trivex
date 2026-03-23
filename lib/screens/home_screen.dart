@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
+import '../providers/theme_mode_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 import '../widgets/elo_sparkline.dart';
@@ -76,27 +77,71 @@ class HomeScreen extends HookConsumerWidget {
 
     final historyAsync = ref.watch(eloHistoryProvider);
 
+    final themeMode = ref.watch(themeModeNotifierProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: historyAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.teal),
-          ),
-          error: (_, _) => const Center(
-            child: CircularProgressIndicator(color: AppColors.teal),
-          ),
-          data: (history) => _buildContent(
-            context,
-            rating: history.isEmpty ? 1000 : history.last.rating,
-            wordmarkFade: wordmarkFade,
-            wordmarkSlide: wordmarkSlide,
-            eloFade: eloFade,
-            eloSlide: eloSlide,
-            buttonFade: buttonFade,
-            buttonSlide: buttonSlide,
-          ),
+        child: Stack(
+          children: [
+            historyAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.teal),
+              ),
+              error: (_, _) => const Center(
+                child: CircularProgressIndicator(color: AppColors.teal),
+              ),
+              data: (history) => _buildContent(
+                context,
+                rating: history.isEmpty ? 1000 : history.last.rating,
+                wordmarkFade: wordmarkFade,
+                wordmarkSlide: wordmarkSlide,
+                eloFade: eloFade,
+                eloSlide: eloSlide,
+                buttonFade: buttonFade,
+                buttonSlide: buttonSlide,
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: _ThemeToggle(mode: themeMode, ref: ref),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _ThemeToggle extends StatelessWidget {
+  const _ThemeToggle({required this.mode, required this.ref});
+
+  final ThemeMode mode;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = switch (mode) {
+      ThemeMode.system => Icons.brightness_auto,
+      ThemeMode.light => Icons.light_mode,
+      ThemeMode.dark => Icons.dark_mode,
+    };
+    final tooltip = switch (mode) {
+      ThemeMode.system => 'Theme: System',
+      ThemeMode.light => 'Theme: Light',
+      ThemeMode.dark => 'Theme: Dark',
+    };
+
+    return Semantics(
+      label: tooltip,
+      button: true,
+      child: IconButton(
+        icon: Icon(icon, color: AppColors.muted),
+        tooltip: tooltip,
+        onPressed: () {
+          ref.read(themeModeNotifierProvider.notifier).cycle();
+        },
       ),
     );
   }

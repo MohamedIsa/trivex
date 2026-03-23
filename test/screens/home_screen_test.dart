@@ -1,16 +1,35 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
+import 'package:trivex/providers/theme_mode_provider.dart';
 import 'package:trivex/screens/home_screen.dart';
 import 'package:trivex/widgets/elo_sparkline.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+late Directory _hiveDir;
+
+Future<void> _initHive() async {
+  _hiveDir = await Directory.systemTemp.createTemp('hive_home_test_');
+  Hive.init(_hiveDir.path);
+  await Hive.openBox(kPrefsBoxName);
+}
+
+Future<void> _tearDownHive() async {
+  await Hive.close();
+  if (_hiveDir.existsSync()) {
+    _hiveDir.deleteSync(recursive: true);
+  }
+}
 
 /// Builds a list of [count] fake EloRecords with ratings starting at [base].
 List<EloRecord> _fakeHistory({int count = 10, int base = 1050}) {
@@ -58,6 +77,9 @@ Future<GoRouter> _pumpHomeScreen(
 
 void main() {
   group('HomeScreen', () {
+    setUp(_initHive);
+    tearDown(_tearDownHive);
+
     // ── Empty history — placeholder + default ELO ─────────────────────────
 
     testWidgets(
