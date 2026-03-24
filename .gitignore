@@ -47,5 +47,8 @@ app.*.map.json
 # Firebase config — credentials injected from CI secrets on release builds
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+firebase.json
 
 docs/
+
+lib/firebase_options.dart

@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'app/router.dart';
+import 'firebase_options.dart';
 import 'models/elo_record.dart';
 import 'models/question.dart';
 import 'providers/theme_mode_provider.dart';
@@ -34,7 +35,9 @@ Future<void> main() async {
   // a no-op (see AnalyticsService).
   if (!kDebugMode) {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       firebaseInitialized = true;
     } catch (_) {
       // Analytics unavailable — app continues.

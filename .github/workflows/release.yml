@@ -37,8 +37,11 @@ jobs:
       - name: Write google-services.json
         run: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
         env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }} 
+      - name: Generate `firebase_options.dart` file
+        run: echo "$FIREBASE_OPTIONS_DART" > ./lib/firebase_options.dart
+        env:
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
       - name: Install dependencies
         run: flutter pub get
 
