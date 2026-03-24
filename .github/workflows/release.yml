@@ -36,7 +36,7 @@ jobs:
       # Then add as GitHub secret: GOOGLE_SERVICES_JSON
       - name: Write google-services.json
         if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
-        run: echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+        run: printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -di > android/app/google-services.json
 
       - name: Install dependencies
         run: flutter pub get
