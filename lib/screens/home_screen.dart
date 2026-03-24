@@ -6,7 +6,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
-import '../providers/theme_mode_provider.dart';
 import '../repositories/onboarding_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
@@ -79,8 +78,6 @@ class HomeScreen extends HookConsumerWidget {
 
     final historyAsync = ref.watch(eloHistoryProvider);
 
-    final themeMode = ref.watch(themeModeNotifierProvider);
-
     final onboardingRepo = ref.read(onboardingRepositoryProvider);
     final showOnboarding = useState(!onboardingRepo.isComplete());
 
@@ -107,11 +104,6 @@ class HomeScreen extends HookConsumerWidget {
                 buttonSlide: buttonSlide,
               ),
             ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: _ThemeToggle(mode: themeMode, ref: ref),
-            ),
             if (showOnboarding.value)
               OnboardingOverlay(
                 onComplete: () {
@@ -121,39 +113,6 @@ class HomeScreen extends HookConsumerWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ThemeToggle extends StatelessWidget {
-  const _ThemeToggle({required this.mode, required this.ref});
-
-  final ThemeMode mode;
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (mode) {
-      ThemeMode.system => Icons.brightness_auto,
-      ThemeMode.light => Icons.light_mode,
-      ThemeMode.dark => Icons.dark_mode,
-    };
-    final tooltip = switch (mode) {
-      ThemeMode.system => 'Theme: System',
-      ThemeMode.light => 'Theme: Light',
-      ThemeMode.dark => 'Theme: Dark',
-    };
-
-    return Semantics(
-      label: tooltip,
-      button: true,
-      child: IconButton(
-        icon: Icon(icon, color: AppColors.muted),
-        tooltip: tooltip,
-        onPressed: () {
-          ref.read(themeModeNotifierProvider.notifier).cycle();
-        },
       ),
     );
   }
@@ -184,32 +143,29 @@ Widget _buildContent(
             position: wordmarkSlide,
             child: Row(
               children: [
-                const SizedBox(width: 48),
-                Expanded(
-                  child: RichText(
-                    textAlign: TextAlign.center,
-                    text: const TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Triv',
-                          style: TextStyle(
-                            color: AppColors.foreground,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                RichText(
+                  text: const TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Triv',
+                        style: TextStyle(
+                          color: AppColors.foreground,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
-                        TextSpan(
-                          text: 'ex',
-                          style: TextStyle(
-                            color: AppColors.teal,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ),
+                      TextSpan(
+                        text: 'ex',
+                        style: TextStyle(
+                          color: AppColors.teal,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+                const Spacer(),
                 Semantics(
                   label: 'Achievements',
                   button: true,

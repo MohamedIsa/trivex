@@ -9,7 +9,7 @@ import 'app/router.dart';
 import 'firebase_options.dart';
 import 'models/elo_record.dart';
 import 'models/question.dart';
-import 'providers/theme_mode_provider.dart';
+import 'providers/theme_mode_provider.dart' show kPrefsBoxName;
 import 'theme/app_theme.dart';
 
 /// Whether Firebase was successfully initialised.
@@ -23,11 +23,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Pin status bar to light icons (white) regardless of device/app theme.
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light, // Android
-    statusBarBrightness: Brightness.dark, // iOS
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // Android
+      statusBarBrightness: Brightness.dark, // iOS
+    ),
+  );
 
   // Firebase — initialise only in release/profile builds.
   // Wrapped in try/catch so a missing google-services.json (or any other
@@ -55,19 +57,17 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MainApp()));
 }
 
-class MainApp extends HookConsumerWidget {
+class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeNotifierProvider);
-
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Trivex',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: themeMode,
+      themeMode: ThemeMode.dark,
       routerConfig: goRouter,
     );
   }

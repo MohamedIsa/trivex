@@ -8,7 +8,7 @@ import 'package:hive/hive.dart';
 
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
-import 'package:trivex/providers/theme_mode_provider.dart';
+import 'package:trivex/providers/theme_mode_provider.dart' show kPrefsBoxName;
 import 'package:trivex/repositories/onboarding_repository.dart';
 import 'package:trivex/screens/home_screen.dart';
 import 'package:trivex/widgets/elo_sparkline.dart';
@@ -56,10 +56,7 @@ Future<GoRouter> _pumpHomeScreen(
   final router = GoRouter(
     initialLocation: '/home',
     routes: [
-      GoRoute(
-        path: '/home',
-        builder: (_, _) => const HomeScreen(),
-      ),
+      GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
       GoRoute(
         path: '/topic',
         builder: (_, _) => const Scaffold(body: Text('route: /topic')),
@@ -86,112 +83,99 @@ void main() {
 
     // ── Empty history — placeholder + default ELO ─────────────────────────
 
-    testWidgets(
-      'empty history — placeholder text visible, "1000" ELO shown',
-      (tester) async {
-        await _pumpHomeScreen(
-          tester,
-          overrides: [
-            eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
-          ],
-        );
-        await tester.pumpAndSettle();
+    testWidgets('empty history — placeholder text visible, "1000" ELO shown', (
+      tester,
+    ) async {
+      await _pumpHomeScreen(
+        tester,
+        overrides: [
+          eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+        ],
+      );
+      await tester.pumpAndSettle();
 
-        // Placeholder text inside EloSparkline when < 2 data points.
-        expect(find.textContaining('Play your first round'), findsOneWidget);
+      // Placeholder text inside EloSparkline when < 2 data points.
+      expect(find.textContaining('Play your first round'), findsOneWidget);
 
-        // Default ELO of 1000 shown.
-        expect(find.text('1000'), findsOneWidget);
-      },
-    );
+      // Default ELO of 1000 shown.
+      expect(find.text('1000'), findsOneWidget);
+    });
 
     // ── 10 records — sparkline present + correct ELO ──────────────────────
 
-    testWidgets(
-      '10 records — EloSparkline present, ELO matches last record',
-      (tester) async {
-        final records = _fakeHistory(count: 10, base: 1050);
+    testWidgets('10 records — EloSparkline present, ELO matches last record', (
+      tester,
+    ) async {
+      final records = _fakeHistory(count: 10, base: 1050);
 
-        await _pumpHomeScreen(
-          tester,
-          overrides: [
-            eloHistoryProvider.overrideWith((_) async => records),
-          ],
-        );
-        await tester.pumpAndSettle();
+      await _pumpHomeScreen(
+        tester,
+        overrides: [eloHistoryProvider.overrideWith((_) async => records)],
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byType(EloSparkline), findsOneWidget);
-        // Last record: 1050 + 9*5 = 1095.
-        expect(find.text('1095'), findsOneWidget);
-      },
-    );
+      expect(find.byType(EloSparkline), findsOneWidget);
+      // Last record: 1050 + 9*5 = 1095.
+      expect(find.text('1095'), findsOneWidget);
+    });
 
     // ── Tap Play → navigates to /topic ────────────────────────────────────
 
-    testWidgets(
-      'tap Play button — navigates to /topic',
-      (tester) async {
-        await _pumpHomeScreen(
-          tester,
-          overrides: [
-            eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
-          ],
-        );
-        await tester.pumpAndSettle();
+    testWidgets('tap Play button — navigates to /topic', (tester) async {
+      await _pumpHomeScreen(
+        tester,
+        overrides: [
+          eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+        ],
+      );
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Play'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Play'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('route: /topic'), findsOneWidget);
-      },
-    );
+      expect(find.text('route: /topic'), findsOneWidget);
+    });
 
     // ── Loading state — CircularProgressIndicator visible ─────────────────
 
-    testWidgets(
-      'loading state — CircularProgressIndicator visible',
-      (tester) async {
-        // Override with a future that takes a long time, keeping state as
-        // AsyncLoading. We'll flush entry timers manually so no leaks.
-        final router = GoRouter(
-          initialLocation: '/home',
-          routes: [
-            GoRoute(
-              path: '/home',
-              builder: (_, _) => const HomeScreen(),
+    testWidgets('loading state — CircularProgressIndicator visible', (
+      tester,
+    ) async {
+      // Override with a future that takes a long time, keeping state as
+      // AsyncLoading. We'll flush entry timers manually so no leaks.
+      final router = GoRouter(
+        initialLocation: '/home',
+        routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            eloHistoryProvider.overrideWith(
+              (_) => Future<List<EloRecord>>.delayed(
+                const Duration(seconds: 10),
+                () => [],
+              ),
             ),
           ],
-        );
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              eloHistoryProvider.overrideWith(
-                (_) => Future<List<EloRecord>>.delayed(
-                  const Duration(seconds: 10),
-                  () => [],
-                ),
-              ),
-            ],
-            child: MaterialApp.router(routerConfig: router),
-          ),
-        );
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
 
-        // First frame — provider is still loading.
-        await tester.pump();
+      // First frame — provider is still loading.
+      await tester.pump();
 
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-        // Advance past all staggered entry-animation timers AND the 10s
-        // future so the test tears down cleanly with no pending timers.
-        await tester.pump(const Duration(seconds: 11));
-        await tester.pumpAndSettle();
-      },
-    );
+      // Advance past all staggered entry-animation timers AND the 10s
+      // future so the test tears down cleanly with no pending timers.
+      await tester.pump(const Duration(seconds: 11));
+      await tester.pumpAndSettle();
+    });
 
-    // ── App name + trophy icon not overlapping ────────────────────────────
+    // ── Wordmark left-aligned before trophy icon ─────────────────────────
 
     testWidgets(
-      'app name and trophy icon both render (Row layout, no overlap)',
+      'wordmark is rendered before the trophy icon (left before right)',
       (tester) async {
         await _pumpHomeScreen(
           tester,
@@ -201,15 +185,42 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // App name visible (RichText with "Triv" + "ex").
-        expect(
-          find.textContaining('Triv', findRichText: true),
-          findsOneWidget,
-        );
+        // App name visible.
+        expect(find.textContaining('Triv', findRichText: true), findsOneWidget);
 
-        // Trophy icon visible and tappable.
+        // Trophy icon visible.
         expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+
+        // Wordmark appears to the left of the trophy icon.
+        final wordmarkRect = tester.getRect(
+          find.textContaining('Triv', findRichText: true),
+        );
+        final trophyRect = tester.getRect(find.byIcon(Icons.emoji_events));
+        expect(
+          wordmarkRect.left,
+          lessThan(trophyRect.left),
+          reason: 'Wordmark should be to the left of the trophy icon',
+        );
       },
     );
+
+    // ── Theme toggle removed ─────────────────────────────────────────────
+
+    testWidgets('theme toggle widget is NOT present on HomeScreen', (
+      tester,
+    ) async {
+      await _pumpHomeScreen(
+        tester,
+        overrides: [
+          eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // None of the three theme toggle icons should be present.
+      expect(find.byIcon(Icons.brightness_auto), findsNothing);
+      expect(find.byIcon(Icons.light_mode), findsNothing);
+      expect(find.byIcon(Icons.dark_mode), findsNothing);
+    });
   });
 }
