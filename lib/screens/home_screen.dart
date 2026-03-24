@@ -109,22 +109,6 @@ class HomeScreen extends HookConsumerWidget {
             ),
             Positioned(
               top: 8,
-              left: 8,
-              child: Semantics(
-                label: 'Achievements',
-                button: true,
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.emoji_events,
-                    color: AppColors.muted,
-                  ),
-                  tooltip: 'Achievements',
-                  onPressed: () => context.push('/achievements'),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 8,
               right: 8,
               child: _ThemeToggle(mode: themeMode, ref: ref),
             ),
@@ -193,32 +177,52 @@ Widget _buildContent(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Wordmark ──────────────────────────────────────────────────
+        // ── Wordmark + Trophy row ─────────────────────────────────
         FadeTransition(
           opacity: wordmarkFade,
           child: SlideTransition(
             position: wordmarkSlide,
-            child: RichText(
-              text: const TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Triv',
-                    style: TextStyle(
-                      color: AppColors.foreground,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+            child: Row(
+              children: [
+                const SizedBox(width: 48),
+                Expanded(
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: const TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Triv',
+                          style: TextStyle(
+                            color: AppColors.foreground,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'ex',
+                          style: TextStyle(
+                            color: AppColors.teal,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  TextSpan(
-                    text: 'ex',
-                    style: TextStyle(
-                      color: AppColors.teal,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                ),
+                Semantics(
+                  label: 'Achievements',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.emoji_events,
+                      color: AppColors.muted,
                     ),
+                    tooltip: 'Achievements',
+                    onPressed: () => context.push('/achievements'),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

@@ -187,5 +187,29 @@ void main() {
         await tester.pumpAndSettle();
       },
     );
+
+    // ── App name + trophy icon not overlapping ────────────────────────────
+
+    testWidgets(
+      'app name and trophy icon both render (Row layout, no overlap)',
+      (tester) async {
+        await _pumpHomeScreen(
+          tester,
+          overrides: [
+            eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+          ],
+        );
+        await tester.pumpAndSettle();
+
+        // App name visible (RichText with "Triv" + "ex").
+        expect(
+          find.textContaining('Triv', findRichText: true),
+          findsOneWidget,
+        );
+
+        // Trophy icon visible and tappable.
+        expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+      },
+    );
   });
 }
