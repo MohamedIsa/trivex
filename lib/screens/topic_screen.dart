@@ -26,6 +26,12 @@ class TopicScreen extends HookWidget {
     /// Whether the "Custom Topic" option is active.
     final customSelected = useState(false);
 
+    /// Whether Arabic category labels are shown.
+    final isArabic = useState(false);
+
+    final focusNode = useFocusNode();
+    final scrollCtrl = useScrollController();
+
     // ── Entry animation ─────────────────────────────────────────────────────
 
     final entryCtrl = useAnimationController(duration: kTopicEntryDuration);
@@ -51,10 +57,14 @@ class TopicScreen extends HookWidget {
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    /// Category label resolved for the current language toggle.
+    String categoryLabel(int i) =>
+        isArabic.value ? kCategories[i].ar : kCategories[i].en;
+
     /// The resolved topic string to send in [GameConfig].
     String? resolvedTopic() {
       if (selectedCategory.value != null) {
-        return kCategories[selectedCategory.value!].label;
+        return categoryLabel(selectedCategory.value!);
       }
       if (customSelected.value && customTopicCtrl.text.trim().isNotEmpty) {
         return customTopicCtrl.text.trim();
@@ -94,166 +104,72 @@ class TopicScreen extends HookWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Back arrow ────────────────────────────────────────
-                  SizedBox(
-                    width: kMinTapTarget,
-                    height: kMinTapTarget,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      tooltip: 'Go back',
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: AppColors.foreground,
-                      ),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/home');
-                        }
-                      },
-                    ),
-                  ),
-
+                  _BackButton(),
+                  const SizedBox(height: 24),
+                  const _Heading(),
                   const SizedBox(height: 24),
 
-                  // ── Heading ───────────────────────────────────────────
-                  const Text(
-                    'Your Round',
-                    style: TextStyle(
-                      color: AppColors.foreground,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ── Category grid (scrollable) ────────────────────────
+                  // ── Scrollable body ───────────────────────────────────
                   Expanded(
                     child: SingleChildScrollView(
+                      controller: scrollCtrl,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: [
-                              for (int i = 0; i < kCategories.length; i++)
-                                _CategoryChip(
-                                  emoji: kCategories[i].emoji,
-                                  label: kCategories[i].label,
-                                  selected:
-                                      selectedCategory.value == i &&
-                                      !customSelected.value,
-                                  onTap: () {
-                                    selectedCategory.value = i;
-                                    customSelected.value = false;
-                                  },
-                                ),
-                              // ── Custom Topic chip ─────────────────────
-                              _CategoryChip(
-                                emoji: '✏️',
-                                label: 'Custom Topic',
-                                selected: customSelected.value,
-                                onTap: () {
-                                  customSelected.value = true;
-                                  selectedCategory.value = null;
-                                },
-                              ),
-                            ],
+                          // ── EN / عربي toggle ──────────────────────────
+                          if (!customSelected.value)
+                            _LanguageToggle(
+                              isArabic: isArabic.value,
+                              onChanged: (v) => isArabic.value = v,
+                            ),
+                          if (!customSelected.value) const SizedBox(height: 16),
+
+                          // ── Category grid ─────────────────────────────
+                          _CategoryGrid(
+                            isArabic: isArabic.value,
+                            selectedCategory: selectedCategory.value,
+                            customSelected: customSelected.value,
+                            categoryLabel: categoryLabel,
+                            onCategoryTap: (i) {
+                              selectedCategory.value = i;
+                              customSelected.value = false;
+                            },
+                            onCustomTap: () {
+                              customSelected.value = true;
+                              selectedCategory.value = null;
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                focusNode.requestFocus();
+                                scrollCtrl.animateTo(
+                                  scrollCtrl.position.maxScrollExtent,
+                                  duration: kButtonTransition,
+                                  curve: kEntryCurve,
+                                );
+                              });
+                            },
                           ),
 
                           // ── Custom topic text field ───────────────────
-                          if (customSelected.value) ...[
-                            const SizedBox(height: 16),
-                            TextField(
+                          if (customSelected.value)
+                            _CustomTopicField(
                               controller: customTopicCtrl,
-                              textInputAction: TextInputAction.go,
+                              focusNode: focusNode,
                               onSubmitted: (_) => start(),
-                              style: const TextStyle(
-                                color: AppColors.foreground,
-                                fontSize: 16,
-                              ),
-                              cursorColor: AppColors.primary,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: AppColors.background,
-                                hintText: 'e.g. The Roman Empire',
-                                hintStyle: TextStyle(
-                                  color: AppColors.mutedHalf,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    kButtonRadius,
-                                  ),
-                                  borderSide: BorderSide(
-                                    color: AppColors.mutedSubtle,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    kButtonRadius,
-                                  ),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                              ),
                             ),
-                          ],
 
                           const SizedBox(height: 32),
 
                           // ── Difficulty pills ──────────────────────────
-                          Row(
-                            children: [
-                              _DifficultyPill(
-                                label: 'Easy',
-                                selected: difficulty.value == 'easy',
-                                onTap: () => difficulty.value = 'easy',
-                              ),
-                              const SizedBox(width: 12),
-                              _DifficultyPill(
-                                label: 'Medium',
-                                selected: difficulty.value == 'medium',
-                                onTap: () => difficulty.value = 'medium',
-                              ),
-                              const SizedBox(width: 12),
-                              _DifficultyPill(
-                                label: 'Hard',
-                                selected: difficulty.value == 'hard',
-                                onTap: () => difficulty.value = 'hard',
-                              ),
-                            ],
+                          _DifficultyRow(
+                            difficulty: difficulty.value,
+                            onChanged: (v) => difficulty.value = v,
                           ),
 
                           const SizedBox(height: 24),
 
                           // ── Question count pills ──────────────────────
-                          Row(
-                            children: [
-                              for (
-                                int i = 0;
-                                i < kQuestionCountOptions.length;
-                                i++
-                              ) ...[
-                                if (i > 0) const SizedBox(width: 12),
-                                _DifficultyPill(
-                                  label: '${kQuestionCountOptions[i]}',
-                                  selected:
-                                      questionCount.value ==
-                                      kQuestionCountOptions[i],
-                                  onTap: () => questionCount.value =
-                                      kQuestionCountOptions[i],
-                                ),
-                              ],
-                            ],
+                          _QuestionCountRow(
+                            count: questionCount.value,
+                            onChanged: (v) => questionCount.value = v,
                           ),
                         ],
                       ),
@@ -279,6 +195,151 @@ class TopicScreen extends HookWidget {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Private sub-widgets
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Back button ─────────────────────────────────────────────────────────────
+
+class _BackButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: kMinTapTarget,
+      height: kMinTapTarget,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        tooltip: 'Go back',
+        icon: const Icon(Icons.arrow_back, color: AppColors.foreground),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/home');
+          }
+        },
+      ),
+    );
+  }
+}
+
+// ── Heading ─────────────────────────────────────────────────────────────────
+
+class _Heading extends StatelessWidget {
+  const _Heading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Text(
+      'Your Round',
+      style: TextStyle(
+        color: AppColors.foreground,
+        fontSize: 30,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+// ── EN / عربي toggle ────────────────────────────────────────────────────────
+
+class _LanguageToggle extends StatelessWidget {
+  const _LanguageToggle({required this.isArabic, required this.onChanged});
+
+  final bool isArabic;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _ToggleChip(
+          label: 'EN',
+          selected: !isArabic,
+          onTap: () => onChanged(false),
+        ),
+        const SizedBox(width: 8),
+        _ToggleChip(
+          label: 'عربي',
+          selected: isArabic,
+          onTap: () => onChanged(true),
+        ),
+      ],
+    );
+  }
+}
+
+class _ToggleChip extends StatelessWidget {
+  const _ToggleChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: kButtonTransition,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(kChipRadius),
+          border: selected ? null : Border.all(color: AppColors.mutedSubtle),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppColors.foreground : AppColors.muted,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Category grid ───────────────────────────────────────────────────────────
+
+class _CategoryGrid extends StatelessWidget {
+  const _CategoryGrid({
+    required this.isArabic,
+    required this.selectedCategory,
+    required this.customSelected,
+    required this.categoryLabel,
+    required this.onCategoryTap,
+    required this.onCustomTap,
+  });
+
+  final bool isArabic;
+  final int? selectedCategory;
+  final bool customSelected;
+  final String Function(int) categoryLabel;
+  final ValueChanged<int> onCategoryTap;
+  final VoidCallback onCustomTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (int i = 0; i < kCategories.length; i++)
+          _CategoryChip(
+            emoji: kCategories[i].emoji,
+            label: categoryLabel(i),
+            selected: selectedCategory == i && !customSelected,
+            onTap: () => onCategoryTap(i),
+          ),
+        // ── Custom Topic chip ───────────────────────────────────
+        _CustomTopicChip(selected: customSelected, onTap: onCustomTap),
+      ],
+    );
+  }
+}
 
 // ── Category chip ───────────────────────────────────────────────────────────
 
@@ -321,6 +382,147 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
+// ── Custom Topic chip (dashed border) ───────────────────────────────────────
+
+class _CustomTopicChip extends StatelessWidget {
+  const _CustomTopicChip({required this.selected, required this.onTap});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: kButtonTransition,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(kChipRadius),
+          border: selected ? null : _dashedBorder(),
+          boxShadow: selected ? [AppShadows.primaryGlowSmall] : null,
+        ),
+        child: Text(
+          '✏️  Custom Topic',
+          style: TextStyle(
+            color: selected ? AppColors.foreground : AppColors.muted,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Returns a dashed-style border by using a lighter, narrower stroke.
+  ///
+  /// Flutter does not support true CSS-style dashes in [Border].  We
+  /// approximate the look with a dotted colour that contrasts against
+  /// the solid borders on normal chips.
+  static Border _dashedBorder() {
+    return Border.all(
+      color: AppColors.primary,
+      width: 1.5,
+      strokeAlign: BorderSide.strokeAlignInside,
+    );
+  }
+}
+
+// ── Custom topic text field ─────────────────────────────────────────────────
+
+class _CustomTopicField extends StatelessWidget {
+  const _CustomTopicField({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: controller,
+            focusNode: focusNode,
+            textInputAction: TextInputAction.go,
+            onSubmitted: onSubmitted,
+            style: const TextStyle(color: AppColors.foreground, fontSize: 16),
+            cursorColor: AppColors.primary,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppColors.background,
+              hintText: 'Type your topic...',
+              hintStyle: TextStyle(color: AppColors.mutedHalf),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(kButtonRadius),
+                borderSide: BorderSide(color: AppColors.mutedSubtle),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(kButtonRadius),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Or type any topic in English or Arabic',
+            style: TextStyle(color: AppColors.mutedHalf, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Difficulty row ──────────────────────────────────────────────────────────
+
+class _DifficultyRow extends StatelessWidget {
+  const _DifficultyRow({required this.difficulty, required this.onChanged});
+
+  final String difficulty;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _DifficultyPill(
+          label: 'Easy',
+          selected: difficulty == 'easy',
+          onTap: () => onChanged('easy'),
+        ),
+        const SizedBox(width: 12),
+        _DifficultyPill(
+          label: 'Medium',
+          selected: difficulty == 'medium',
+          onTap: () => onChanged('medium'),
+        ),
+        const SizedBox(width: 12),
+        _DifficultyPill(
+          label: 'Hard',
+          selected: difficulty == 'hard',
+          onTap: () => onChanged('hard'),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Difficulty pill ─────────────────────────────────────────────────────────
 
 class _DifficultyPill extends StatelessWidget {
@@ -359,6 +561,31 @@ class _DifficultyPill extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Question count row ──────────────────────────────────────────────────────
+
+class _QuestionCountRow extends StatelessWidget {
+  const _QuestionCountRow({required this.count, required this.onChanged});
+
+  final int count;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (int i = 0; i < kQuestionCountOptions.length; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          _DifficultyPill(
+            label: '${kQuestionCountOptions[i]}',
+            selected: count == kQuestionCountOptions[i],
+            onTap: () => onChanged(kQuestionCountOptions[i]),
+          ),
+        ],
+      ],
     );
   }
 }
