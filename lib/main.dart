@@ -1,3 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -10,6 +12,14 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase — initialise only in release/profile builds.
+  // In debug mode or when google-services.json / GoogleService-Info.plist
+  // are missing, analytics is a no-op (see AnalyticsService).
+  if (!kDebugMode) {
+    await Firebase.initializeApp();
+  }
+
   await Hive.initFlutter();
   Hive.registerAdapter(EloRecordAdapter());
   Hive.registerAdapter(QuestionAdapter());

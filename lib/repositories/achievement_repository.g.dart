@@ -7,7 +7,7 @@ part of 'achievement_repository.dart';
 // **************************************************************************
 
 String _$achievementRepositoryHash() =>
-    r'64c7abb0bba36113b118e99546e88a9614bdec44';
+    r'9b433a43913df60e3346ecb4c03a0ee54198176f';
 
 /// Riverpod provider for [AchievementRepository].
 ///

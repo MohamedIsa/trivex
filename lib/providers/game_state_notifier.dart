@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/question.dart';
 import '../repositories/elo_repository.dart';
+import '../services/analytics_service.dart';
 import '../services/bot_engine.dart';
 import '../services/elo_service.dart';
 import '../services/score_service.dart';
@@ -22,6 +23,9 @@ class GameStateNotifier extends _$GameStateNotifier {
 
   /// Access the ELO repository via the provider graph.
   EloRepository get _eloRepository => ref.read(eloRepositoryProvider);
+
+  /// Access the analytics service via the provider graph.
+  AnalyticsService get _analytics => ref.read(analyticsServiceProvider);
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -45,6 +49,13 @@ class GameStateNotifier extends _$GameStateNotifier {
         playerScore: 0,
         botScore: 0,
       ),
+    );
+
+    _analytics.logGameStarted(
+      topic: topic,
+      difficulty: difficulty,
+      language: language,
+      questionCount: questions.length,
     );
   }
 
@@ -83,6 +94,13 @@ class GameStateNotifier extends _$GameStateNotifier {
       ),
       selectedIndex: index,
     );
+
+    final answerTimeSeconds = round.currentQuestion.timeLimit - timeLeft;
+    _analytics.logQuestionAnswered(
+      correct: playerCorrect,
+      timeTakenMs: answerTimeSeconds * Duration.millisecondsPerSecond,
+      questionIndex: round.currentIndex,
+    );
   }
 
   /// Advances to the next question, or ends the game after the last question.
@@ -101,6 +119,20 @@ class GameStateNotifier extends _$GameStateNotifier {
       final playerWon = round.playerScore > round.botScore;
       final elo = EloService.calculate(playerRating, playerWon);
       state = GamePhase.finished(round: round, eloResult: elo);
+
+      final result = round.playerScore > round.botScore
+          ? 'win'
+          : round.playerScore < round.botScore
+              ? 'loss'
+              : 'draw';
+      _analytics.logGameCompleted(
+        topic: round.topic,
+        difficulty: round.difficulty,
+        language: round.language,
+        playerScore: round.playerScore,
+        botScore: round.botScore,
+        result: result,
+      );
       return;
     }
 
@@ -131,6 +163,13 @@ class GameStateNotifier extends _$GameStateNotifier {
         ],
       ),
       // selectedIndex stays null — no player selection.
+    );
+
+    _analytics.logQuestionAnswered(
+      correct: false,
+      timeTakenMs:
+          round.currentQuestion.timeLimit * Duration.millisecondsPerSecond,
+      questionIndex: round.currentIndex,
     );
   }
 }

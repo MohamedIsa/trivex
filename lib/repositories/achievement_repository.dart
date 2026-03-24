@@ -1,6 +1,8 @@
 import 'package:hive/hive.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../services/analytics_service.dart';
+
 part 'achievement_repository.g.dart';
 
 /// Persists unlocked achievement IDs via a Hive box named `'achievements'`.
@@ -9,6 +11,12 @@ part 'achievement_repository.g.dart';
 /// Also stores auxiliary counters (win streak, games played) needed by
 /// achievement condition checks.
 class AchievementRepository {
+  AchievementRepository({this.analytics});
+
+  /// Optional analytics service — injected via Riverpod provider.
+  /// When present, [unlock] fires an `achievement_unlocked` event.
+  final AnalyticsService? analytics;
+
   static const String boxName = 'achievements';
   static const String _unlockedKey = 'unlocked';
   static const String _winStreakKey = 'win_streak';
@@ -32,6 +40,7 @@ class AchievementRepository {
     current.add(id);
     await _box.put(_unlockedKey, current.toList());
     await _box.put('date_$id', DateTime.now().toIso8601String());
+    analytics?.logAchievementUnlocked(achievementId: id);
   }
 
   /// Returns the [DateTime] when [id] was unlocked, or `null` if locked.
@@ -65,5 +74,7 @@ class AchievementRepository {
 /// Riverpod provider for [AchievementRepository].
 @Riverpod(keepAlive: true)
 AchievementRepository achievementRepository(AchievementRepositoryRef ref) {
-  return AchievementRepository();
+  return AchievementRepository(
+    analytics: ref.read(analyticsServiceProvider),
+  );
 }
