@@ -9,8 +9,6 @@ jobs:
   build-apk:
     name: Build release APK
     runs-on: ubuntu-latest
-    env:
-      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
     steps:
       - name: Checkout
@@ -32,11 +30,12 @@ jobs:
             ${{ runner.os }}-pub-
 
       # ── Firebase credentials ──────────────────────────────────────────
-      # To set up: base64 -i android/app/google-services.json | pbcopy
-      # Then add as GitHub secret: GOOGLE_SERVICES_JSON
+      # Store the raw google-services.json content as GitHub secret:
+      # GOOGLE_SERVICES_JSON
       - name: Write google-services.json
-        if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
-        run: printf '%s' "$GOOGLE_SERVICES_JSON" | base64 -di > android/app/google-services.json
+        run: echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
       - name: Install dependencies
         run: flutter pub get
