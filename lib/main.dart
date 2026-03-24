@@ -10,14 +10,27 @@ import 'models/question.dart';
 import 'providers/theme_mode_provider.dart';
 import 'theme/app_theme.dart';
 
+/// Whether Firebase was successfully initialised.
+///
+/// Read by the [AnalyticsService] provider — when `false` the service
+/// becomes a complete no-op so a missing `google-services.json` or any
+/// other Firebase error never affects app behaviour.
+bool firebaseInitialized = false;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Firebase — initialise only in release/profile builds.
-  // In debug mode or when google-services.json / GoogleService-Info.plist
-  // are missing, analytics is a no-op (see AnalyticsService).
+  // Wrapped in try/catch so a missing google-services.json (or any other
+  // Firebase error) never blocks app launch — analytics simply becomes
+  // a no-op (see AnalyticsService).
   if (!kDebugMode) {
-    await Firebase.initializeApp();
+    try {
+      await Firebase.initializeApp();
+      firebaseInitialized = true;
+    } catch (_) {
+      // Analytics unavailable — app continues.
+    }
   }
 
   await Hive.initFlutter();

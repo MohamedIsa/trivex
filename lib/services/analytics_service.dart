@@ -2,6 +2,8 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../main.dart' show firebaseInitialized;
+
 part 'analytics_service.g.dart';
 
 /// Thin, typed wrapper around [FirebaseAnalytics].
@@ -112,6 +114,6 @@ class AnalyticsService {
 /// Tests override this provider with a mock or a no-op stub.
 @Riverpod(keepAlive: true)
 AnalyticsService analyticsService(AnalyticsServiceRef ref) {
-  if (kDebugMode) return const AnalyticsService(null);
+  if (kDebugMode || !firebaseInitialized) return const AnalyticsService(null);
   return AnalyticsService(FirebaseAnalytics.instance);
 }
