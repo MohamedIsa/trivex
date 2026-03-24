@@ -7,9 +7,11 @@ import '../constants/animation_constants.dart';
 import '../constants/layout_constants.dart';
 import '../providers/elo_history_provider.dart';
 import '../providers/theme_mode_provider.dart';
+import '../repositories/onboarding_repository.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_shadows.dart';
 import '../widgets/elo_sparkline.dart';
+import '../widgets/onboarding_overlay.dart';
 
 /// Home screen — ELO display, sparkline & Play button .
 class HomeScreen extends HookConsumerWidget {
@@ -79,6 +81,9 @@ class HomeScreen extends HookConsumerWidget {
 
     final themeMode = ref.watch(themeModeNotifierProvider);
 
+    final onboardingRepo = ref.read(onboardingRepositoryProvider);
+    final showOnboarding = useState(!onboardingRepo.isComplete());
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -123,6 +128,13 @@ class HomeScreen extends HookConsumerWidget {
               right: 8,
               child: _ThemeToggle(mode: themeMode, ref: ref),
             ),
+            if (showOnboarding.value)
+              OnboardingOverlay(
+                onComplete: () {
+                  onboardingRepo.markComplete();
+                  showOnboarding.value = false;
+                },
+              ),
           ],
         ),
       ),

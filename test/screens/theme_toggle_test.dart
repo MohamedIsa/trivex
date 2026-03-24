@@ -9,6 +9,7 @@ import 'package:hive/hive.dart';
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
 import 'package:trivex/providers/theme_mode_provider.dart';
+import 'package:trivex/repositories/onboarding_repository.dart';
 import 'package:trivex/screens/home_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -20,7 +21,8 @@ late Directory _tempDir;
 Future<void> _initHive() async {
   _tempDir = await Directory.systemTemp.createTemp('hive_theme_widget_');
   Hive.init(_tempDir.path);
-  await Hive.openBox(kPrefsBoxName);
+  final box = await Hive.openBox(kPrefsBoxName);
+  await box.put(kOnboardingCompleteKey, true);
 }
 
 Future<void> _tearDownHive() async {

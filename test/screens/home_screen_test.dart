@@ -9,6 +9,7 @@ import 'package:hive/hive.dart';
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/providers/elo_history_provider.dart';
 import 'package:trivex/providers/theme_mode_provider.dart';
+import 'package:trivex/repositories/onboarding_repository.dart';
 import 'package:trivex/screens/home_screen.dart';
 import 'package:trivex/widgets/elo_sparkline.dart';
 
@@ -21,7 +22,10 @@ late Directory _hiveDir;
 Future<void> _initHive() async {
   _hiveDir = await Directory.systemTemp.createTemp('hive_home_test_');
   Hive.init(_hiveDir.path);
-  await Hive.openBox(kPrefsBoxName);
+  final box = await Hive.openBox(kPrefsBoxName);
+  // Mark onboarding complete so the overlay doesn't interfere with existing
+  // HomeScreen tests. Onboarding-specific tests live in a dedicated file.
+  await box.put(kOnboardingCompleteKey, true);
 }
 
 Future<void> _tearDownHive() async {
