@@ -104,8 +104,7 @@ class ResultScreen extends HookConsumerWidget {
           difficulty: round.difficulty,
           language: round.language,
         );
-        final questionTexts =
-            round.questions.map((q) => q.question).toList();
+        final questionTexts = round.questions.map((q) => q.question).toList();
         cacheRepo.save(cacheKey, questionTexts);
 
         // ── Achievement checking ──────────────────────────────────────
@@ -133,19 +132,11 @@ class ResultScreen extends HookConsumerWidget {
         }
         newUnlocks.value = unlocked;
 
-        // Show toast for each new unlock with staggered delay.
-        for (var i = 0; i < unlocked.length; i++) {
-          final a = kAchievements.firstWhere((a) => a.id == unlocked[i]);
-          Future.delayed(Duration(milliseconds: 500 * (i + 1)), () {
+        // Show modal popup for each new unlock, chained sequentially.
+        if (unlocked.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 500), () {
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${a.emoji}  ${a.name} unlocked!'),
-                  duration: const Duration(seconds: 2),
-                  backgroundColor: AppColors.primary,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              _showAchievementDialogs(context, unlocked, 0);
             }
           });
         }
@@ -400,6 +391,110 @@ class ResultScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Achievement dialog
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Shows achievement unlock dialogs one at a time, chained sequentially.
+void _showAchievementDialogs(
+  BuildContext context,
+  List<String> ids,
+  int index,
+) {
+  if (index >= ids.length || !context.mounted) return;
+
+  final a = kAchievements.firstWhere((a) => a.id == ids[index]);
+
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => _AchievementDialog(achievement: a),
+  ).then((_) {
+    if (index + 1 < ids.length) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (context.mounted) {
+          _showAchievementDialogs(context, ids, index + 1);
+        }
+      });
+    }
+  });
+}
+
+class _AchievementDialog extends StatelessWidget {
+  const _AchievementDialog({required this.achievement});
+
+  final Achievement achievement;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.card,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(kCardRadius),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🏆', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 16),
+            const Text(
+              'Achievement Unlocked!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppColors.foreground,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              achievement.name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.foreground,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              achievement.hint,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(kButtonRadius),
+                    boxShadow: [AppShadows.primaryGlow],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Awesome!',
+                    style: TextStyle(
+                      color: AppColors.foreground,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

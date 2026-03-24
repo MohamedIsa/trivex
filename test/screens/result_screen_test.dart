@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:trivex/models/achievement.dart';
 import 'package:trivex/models/elo_record.dart';
 import 'package:trivex/models/game_config.dart';
 import 'package:trivex/models/question.dart';
@@ -519,6 +520,8 @@ void main() {
       },
     );
   });
+
+  _achievementDialogTests();
 }
 
 // ---------------------------------------------------------------------------
@@ -590,4 +593,173 @@ Future<GoRouter> _pumpWithRouter(
   }
 
   return router;
+}
+
+// ---------------------------------------------------------------------------
+// Achievement dialog tests — helpers
+// ---------------------------------------------------------------------------
+
+/// In-memory repo with NO achievements unlocked — triggers real unlock logic.
+class _EmptyAchievementRepository extends AchievementRepository {
+  final Set<String> _unlocked = {};
+  final Map<String, DateTime> _dates = {};
+  int _winStreak = 0;
+  int _gamesPlayed = 0;
+
+  @override
+  Set<String> getUnlocked() => Set.of(_unlocked);
+
+  @override
+  Future<void> unlock(String id) async {
+    if (_unlocked.add(id)) _dates[id] = DateTime.now();
+  }
+
+  @override
+  DateTime? getUnlockDate(String id) => _dates[id];
+
+  @override
+  int getWinStreak() => _winStreak;
+
+  @override
+  Future<void> setWinStreak(int streak) async => _winStreak = streak;
+
+  @override
+  int getGamesPlayed() => _gamesPlayed;
+
+  @override
+  Future<void> incrementGamesPlayed() async => _gamesPlayed++;
+}
+
+/// Pumps [ResultScreen] with an empty achievement repository so real
+/// achievement dialogs can trigger.
+Future<void> _pumpWithAchievements(
+  WidgetTester tester, {
+  required GamePhase state,
+  AchievementRepository? achievementRepo,
+}) async {
+  tester.view.physicalSize = const Size(1080, 1920);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
+  final fakeRepo = _FakeEloRepository();
+  final fakeCacheRepo = _FakeQuestionCacheRepository();
+  final fakeAchieveRepo = achievementRepo ?? _EmptyAchievementRepository();
+
+  final container = ProviderContainer(
+    overrides: [
+      eloRepositoryProvider.overrideWithValue(fakeRepo),
+      questionCacheRepositoryProvider.overrideWithValue(fakeCacheRepo),
+      achievementRepositoryProvider.overrideWithValue(fakeAchieveRepo),
+      gameStateNotifierProvider.overrideWith(() => _SeedableNotifier(state)),
+      eloHistoryProvider.overrideWith((_) async => <EloRecord>[]),
+    ],
+  );
+  addTearDown(container.dispose);
+
+  final router = GoRouter(
+    initialLocation: '/result',
+    routes: [
+      GoRoute(
+        path: '/result',
+        builder: (_, _) => const ResultScreen(),
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (_, _) => const Scaffold(body: Text('route: /home')),
+      ),
+      GoRoute(
+        path: '/topic',
+        builder: (_, _) => const Scaffold(body: Text('route: /topic')),
+      ),
+      GoRoute(
+        path: '/loading',
+        builder: (_, _) => const Scaffold(body: Text('route: /loading')),
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(routerConfig: router),
+    ),
+  );
+
+  // Walk past staggered entry animations.
+  for (var i = 0; i < 6; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Achievement dialog tests
+// ---------------------------------------------------------------------------
+
+void _achievementDialogTests() {
+  group('Achievement dialog', () {
+    testWidgets(
+      'single achievement unlocked — dialog shown with correct name',
+      (tester) async {
+        // Win state triggers first_win achievement.
+        await _pumpWithAchievements(tester, state: _winState());
+
+        // Advance past the 500ms delay before showing the dialog.
+        await tester.pump(const Duration(milliseconds: 600));
+        // Let the dialog animation settle (avoid pumpAndSettle due to
+        // confetti controller keeping the tree alive).
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Dialog heading and achievement name visible.
+        expect(find.text('Achievement Unlocked!'), findsOneWidget);
+
+        final firstWin = kAchievements.firstWhere((a) => a.id == 'first_win');
+        expect(find.text(firstWin.name), findsOneWidget);
+        expect(find.text(firstWin.hint), findsOneWidget);
+        expect(find.text('Awesome!'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tapping "Awesome!" dismisses the dialog',
+      (tester) async {
+        await _pumpWithAchievements(tester, state: _winState());
+
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Dialog is showing.
+        expect(find.text('Achievement Unlocked!'), findsOneWidget);
+
+        // Tap dismiss.
+        await tester.tap(find.text('Awesome!'));
+        // Let the dialog close animation complete.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Dialog dismissed.
+        expect(find.text('Achievement Unlocked!'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'no achievements — no dialog shown',
+      (tester) async {
+        // Use the fully-unlocked repo so nothing new triggers.
+        await _pumpWithAchievements(
+          tester,
+          state: _winState(),
+          achievementRepo: _FakeAchievementRepository(),
+        );
+
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // No dialog.
+        expect(find.text('Achievement Unlocked!'), findsNothing);
+      },
+    );
+  });
 }
