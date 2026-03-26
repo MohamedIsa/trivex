@@ -162,11 +162,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
 // ── Timer warning audio ─────────────────────────────────────────────────────
 
-/// Plays a short beep **once** when the countdown enters the danger zone
-/// (≤ [kTimerWarningSeconds] seconds remaining) and the phase is still
-/// [PlayingPhase] (i.e. the player has not yet answered).
+/// Plays a repeating tick sound throughout the question countdown.
 ///
-/// Renders no pixels — exists purely for its [useEffect] side-effect.
+/// Normal rhythm ([kTickIntervalNormal]) during regular time, faster rhythm
+/// ([kTickIntervalFast]) when entering the danger zone
+/// (≤ [kTimerWarningSeconds] seconds remaining).
+///
+/// Renders no pixels — exists purely for its [useEffect] side-effects.
 class _TimerWarningAudio extends HookConsumerWidget {
   const _TimerWarningAudio({required this.timerController});
 
@@ -175,41 +177,50 @@ class _TimerWarningAudio extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final phase = ref.watch(gameStateNotifierProvider);
-    // Watch (not just read) so Riverpod keeps the AudioPlayer alive while
-    // this widget is mounted; otherwise auto-dispose kills it before it
-    // can finish playing the beep.
+    // Watch (not just read) so Riverpod keeps the player alive while
+    // this widget is mounted.
     final soundPlayer = ref.watch(timerWarningSoundPlayerProvider);
-    final hasFired = useState(false);
+    final isInDangerZone = useRef(false);
 
-    // Reset the flag each time a new question starts (PlayingPhase with a
-    // fresh currentIndex).
+    final isPlaying = phase is PlayingPhase;
     final currentIndex =
         phase is PlayingPhase ? phase.round.currentIndex : -1;
+
+    // Reset danger-zone flag when a new question starts.
     useEffect(() {
-      hasFired.value = false;
+      isInDangerZone.value = false;
       return null;
     }, [currentIndex]);
 
-    // Listen to the animation controller and fire when entering danger zone.
+    // Start / stop ticking based on phase.
+    useEffect(() {
+      if (isPlaying) {
+        soundPlayer.startTicking(kTickIntervalNormal);
+      } else {
+        soundPlayer.stopTicking();
+      }
+      return () => soundPlayer.stopTicking();
+    }, [isPlaying, currentIndex]);
+
+    // Switch to fast ticking when entering the danger zone.
     final controller = timerController.controller;
     useEffect(() {
-      if (controller == null) return null;
+      if (controller == null || !isPlaying) return null;
 
       void onTick() {
-        if (hasFired.value) return;
-        if (phase is! PlayingPhase) return;
+        if (isInDangerZone.value) return;
 
         final remaining =
             (1.0 - controller.value) * controller.duration!.inSeconds;
         if (remaining <= kTimerWarningSeconds) {
-          hasFired.value = true;
-          soundPlayer.play();
+          isInDangerZone.value = true;
+          soundPlayer.startTicking(kTickIntervalFast);
         }
       }
 
       controller.addListener(onTick);
       return () => controller.removeListener(onTick);
-    }, [controller, phase]);
+    }, [controller, isPlaying]);
 
     return const SizedBox.shrink();
   }

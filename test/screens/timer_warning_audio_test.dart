@@ -23,7 +23,9 @@ class _FakeSoundPlayer extends TimerWarningSoundPlayer {
   void play() => playCount++;
 
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    stopTicking();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -111,7 +113,7 @@ void main() {
 
   group('TimerWarningAudio', () {
     testWidgets(
-      'timer reaches ≤5s on unanswered question (PlayingPhase) — audio plays once',
+      'ticks during PlayingPhase and speeds up in danger zone (≤5s)',
       (tester) async {
         final (:container, :player) = await _pumpGame(tester);
 
@@ -121,29 +123,36 @@ void main() {
           isA<PlayingPhase>(),
         );
 
-        // Fast-forward 10 seconds — timer is 15s, so 5s remain.
-        // This crosses the ≤5s danger zone threshold.
-        await tester.pump(const Duration(seconds: 10));
+        // Advance 3 seconds — normal ticking should have occurred.
+        await tester.pump(const Duration(seconds: 3));
+        final countAfter3s = player.playCount;
+        expect(countAfter3s, greaterThan(0));
+
+        // Advance to the danger zone (10s total → 5s remaining).
+        final countBeforeDanger = player.playCount;
+        await tester.pump(const Duration(seconds: 7));
         await tester.pump(const Duration(milliseconds: 100));
+        expect(player.playCount, greaterThan(countBeforeDanger));
 
-        // Audio should have been triggered exactly once.
-        expect(player.playCount, 1);
-
-        // Continue pumping — should NOT fire again.
+        // Continue in danger zone — fast ticking produces more plays.
+        final countBeforeFast = player.playCount;
         await tester.pump(const Duration(seconds: 2));
-        expect(player.playCount, 1);
+        final fastTicks = player.playCount - countBeforeFast;
+        // 2 s at 350 ms interval → ≈ 5-6 ticks.
+        expect(fastTicks, greaterThan(3));
 
         addTearDown(container.dispose);
       },
     );
 
     testWidgets(
-      'question answered before ≤5s — audio NOT played',
+      'ticking stops when question is answered',
       (tester) async {
         final (:container, :player) = await _pumpGame(tester);
 
-        // Advance only 3 seconds (well before the ≤5s threshold).
+        // Advance 3 seconds — normal ticking occurs.
         await tester.pump(const Duration(seconds: 3));
+        expect(player.playCount, greaterThan(0));
 
         // Answer the question — transitions to RevealingPhase.
         await tester.tap(find.text('Alpha'));
@@ -154,12 +163,12 @@ void main() {
           isA<RevealingPhase>(),
         );
 
-        // Advance past where the threshold would have been.
-        await tester.pump(const Duration(seconds: 10));
-        await tester.pump(const Duration(seconds: 5));
+        // Record count right after answering.
+        final countAfterAnswer = player.playCount;
 
-        // Audio should never have played.
-        expect(player.playCount, 0);
+        // Advance more time — ticking should have stopped.
+        await tester.pump(const Duration(seconds: 5));
+        expect(player.playCount, countAfterAnswer);
 
         addTearDown(container.dispose);
       },
