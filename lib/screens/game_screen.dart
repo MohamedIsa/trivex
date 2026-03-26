@@ -175,6 +175,10 @@ class _TimerWarningAudio extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final phase = ref.watch(gameStateNotifierProvider);
+    // Watch (not just read) so Riverpod keeps the AudioPlayer alive while
+    // this widget is mounted; otherwise auto-dispose kills it before it
+    // can finish playing the beep.
+    final soundPlayer = ref.watch(timerWarningSoundPlayerProvider);
     final hasFired = useState(false);
 
     // Reset the flag each time a new question starts (PlayingPhase with a
@@ -199,7 +203,7 @@ class _TimerWarningAudio extends HookConsumerWidget {
             (1.0 - controller.value) * controller.duration!.inSeconds;
         if (remaining <= kTimerWarningSeconds) {
           hasFired.value = true;
-          ref.read(timerWarningSoundPlayerProvider).play();
+          soundPlayer.play();
         }
       }
 
