@@ -186,21 +186,19 @@ class _TimerWarningAudio extends HookConsumerWidget {
     final currentIndex =
         phase is PlayingPhase ? phase.round.currentIndex : -1;
 
-    // Reset danger-zone flag when a new question starts.
+    // Every time a new question starts (currentIndex changes while playing),
+    // reset danger-zone flag and start normal ticking from scratch.
+    // When the phase leaves PlayingPhase, stop ticking.
     useEffect(() {
       isInDangerZone.value = false;
-      return null;
-    }, [currentIndex]);
-
-    // Start / stop ticking based on phase.
-    useEffect(() {
       if (isPlaying) {
-        soundPlayer.startTicking(kTickIntervalNormal);
+        // Small delay to ensure the timer controller has restarted.
+        Future.microtask(() => soundPlayer.startTicking(kTickIntervalNormal));
       } else {
         soundPlayer.stopTicking();
       }
       return () => soundPlayer.stopTicking();
-    }, [isPlaying, currentIndex]);
+    }, [currentIndex, isPlaying]);
 
     // Switch to fast ticking when entering the danger zone.
     final controller = timerController.controller;
